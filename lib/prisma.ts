@@ -690,7 +690,12 @@ function createModelProxy(modelName: string) {
       // Fetch embedded resources separately
       let result = data ?? []
       if (include && result.length > 0) {
-        result = await fetchIncludes(table, result, include)
+        try {
+          result = await fetchIncludes(table, result, include)
+        } catch (incErr) {
+          console.error(`[supabase-db] fetchIncludes ${table} error:`, incErr)
+          // Return data without includes rather than failing
+        }
       }
       return result
     },
@@ -722,8 +727,13 @@ function createModelProxy(modelName: string) {
 
       // Fetch includes if needed
       if (include) {
-        const [enriched] = await fetchIncludes(table, [data], include)
-        return enriched
+        try {
+          const [enriched] = await fetchIncludes(table, [data], include)
+          return enriched
+        } catch (incErr) {
+          console.error(`[supabase-db] fetchIncludes ${table} error:`, incErr)
+          return data
+        }
       }
       return data
     },

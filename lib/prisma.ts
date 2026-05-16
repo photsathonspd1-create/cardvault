@@ -575,6 +575,10 @@ function createModelProxy(modelName: string) {
 
       // Build select string (without embedded limit/order — those are handled in JS)
       const selectStr = buildSelectStringSimple(include, select)
+      
+      // Debug: log the select string to Vercel function logs
+      console.log(`[supabase-db] findMany ${table} select:`, selectStr)
+      
       let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
 
       // Apply filters

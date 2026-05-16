@@ -480,36 +480,119 @@ function createModelProxy(modelName: string) {
       }
 
       const { selectStr, extraParams } = buildSelectString(include, select, table)
-      let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
 
-      // Apply extra PostgREST params (limit/order on embedded relations)
-      for (const [key, val] of Object.entries(extraParams)) {
-        query.url.searchParams.set(key, val)
-      }
+      // Build PostgREST URL manually for reliable extra params
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+      const params = new URLSearchParams()
+      params.set("select", selectStr)
 
       // Apply filters
       if (where) {
-        query = applyWhereClause(query, where)
+        for (const [key, val] of Object.entries(where)) {
+          if (key === "OR" || key === "AND" || key === "NOT") continue
+          if (val === null) { params.set(key, "is.null"); continue }
+          if (typeof val === "object" && !Array.isArray(val) && !(val instanceof Date)) {
+            const ops = val as Record<string, unknown>
+            for (const [op, opVal] of Object.entries(ops)) {
+              if (op === "mode") continue
+              if (op === "equals") params.set(key, `eq.${opVal}`)
+              else if (op === "not" && opVal !== null && typeof opVal === "object") {
+                const inner = opVal as Record<string, unknown>
+                for (const [iop, ival] of Object.entries(inner)) {
+                  params.set(key, `not.${mapOp(iop)}.${ival}`)
+                }
+              } else if (op === "not") params.set(key, `not.eq.${opVal}`)
+              else if (op === "in") params.set(key, `in.(${(opVal as unknown[]).map(formatVal).join(",")})`)
+              else if (op === "contains") params.set(key, `${ops.mode === "insensitive" ? "ilike" : "like"}.*${opVal}*`)
+              else if (op === "gt" || op === "gte" || op === "lt" || op === "lte") params.set(key, `${op}.${opVal}`)
+              else params.set(key, `eq.${val}`)
+            }
+          } else {
+            params.set(key, `eq.${val}`)
+          }
+        }
+
+        // Handle OR
+        if (where.OR && Array.isArray(where.OR)) {
+          const orParts: string[] = []
+          for (const clause of where.OR as Record<string, unknown>[]) {
+            const parts: string[] = []
+            for (const [key, val] of Object.entries(clause)) {
+              if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+                const ops = val as Record<string, unknown>
+                for (const [op, opVal] of Object.entries(ops)) {
+                  if (op === "mode") continue
+                  if (op === "contains") {
+                    const mode = ops.mode === "insensitive" ? "ilike" : "like"
+                    parts.push(`${key}.${mode}.*${opVal}*`)
+                  } else if (op === "equals") {
+                    parts.push(`${key}.eq.${opVal}`)
+                  } else {
+                    parts.push(`${key}.${op}.${opVal}`)
+                  }
+                }
+              } else {
+                parts.push(`${key}.eq.${val}`)
+              }
+            }
+            orParts.push(parts.join(","))
+          }
+          params.set("or", `(${orParts.join(",")})`)
+        }
       }
 
       // Apply ordering
       if (orderBy) {
-        query = applyOrdering(query, orderBy)
+        if (Array.isArray(orderBy)) {
+          for (const ob of orderBy) {
+            if (typeof ob === "object" && ob !== null) {
+              const [field, dir] = Object.entries(ob as Record<string, string>)[0]
+              params.set("order", `${field}.${dir}`)
+            }
+          }
+        } else if (typeof orderBy === "object" && orderBy !== null) {
+          const [field, dir] = Object.entries(orderBy as Record<string, string>)[0]
+          params.set("order", `${field}.${dir}`)
+        }
       }
 
       // Apply pagination
-      if (skip !== undefined && take !== undefined) {
-        query = query.range(skip, skip + take - 1)
-      } else if (take !== undefined) {
-        query = query.range(0, take - 1)
+      if (take !== undefined) {
+        params.set("limit", String(take))
+        if (skip !== undefined) {
+          const from = skip
+          const to = skip + take - 1
+          params.set("offset", String(from))
+        }
       }
 
-      const { data, error } = await query
-      if (error) {
-        console.error(`[supabase-db] findMany ${table} error:`, error.message)
+      // Apply extra PostgREST params (limit/order on embedded relations)
+      for (const [key, val] of Object.entries(extraParams)) {
+        params.set(key, val)
+      }
+
+      // Use raw fetch for reliable PostgREST query
+      const url = `${supabaseUrl}/rest/v1/${table}?${params.toString()}`
+      try {
+        const response = await fetch(url, {
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
+            Prefer: "count=exact",
+          },
+        })
+        if (!response.ok) {
+          console.error(`[supabase-db] findMany ${table} error: ${response.status} ${response.statusText}`)
+          return []
+        }
+        const data = await response.json()
+        return Array.isArray(data) ? data : []
+      } catch (err) {
+        console.error(`[supabase-db] findMany ${table} error:`, err)
         return []
       }
-      return data ?? []
     },
 
     async findFirst(args: Record<string, unknown> = {}) {
@@ -525,23 +608,53 @@ function createModelProxy(modelName: string) {
       }
 
       const { selectStr, extraParams } = buildSelectString(include, select, table)
-      let query = supabaseAdmin.from(table).select(selectStr)
 
-      // Apply extra PostgREST params
-      for (const [key, val] of Object.entries(extraParams)) {
-        query.url.searchParams.set(key, val)
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+      const params = new URLSearchParams()
+      params.set("select", selectStr)
+
+      // Apply filters
+      if (where) {
+        for (const [key, val] of Object.entries(where)) {
+          if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+            const ops = val as Record<string, unknown>
+            for (const [op, opVal] of Object.entries(ops)) {
+              if (op === "equals") params.set(key, `eq.${opVal}`)
+              else if (op === "in") params.set(key, `in.(${(opVal as unknown[]).map(formatVal).join(",")})`)
+              else params.set(key, `eq.${val}`)
+            }
+          } else {
+            params.set(key, `eq.${val}`)
+          }
+        }
       }
 
-      // Apply unique filters
-      query = applyWhereClause(query, where)
-      query = query.limit(1).maybeSingle()
+      for (const [key, val] of Object.entries(extraParams)) {
+        params.set(key, val)
+      }
 
-      const { data, error } = await query
-      if (error) {
-        console.error(`[supabase-db] findUnique ${table} error:`, error.message)
+      params.set("limit", "1")
+
+      const url = `${supabaseUrl}/rest/v1/${table}?${params.toString()}`
+      try {
+        const response = await fetch(url, {
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
+          },
+        })
+        if (!response.ok) {
+          console.error(`[supabase-db] findUnique ${table} error: ${response.status}`)
+          return null
+        }
+        const data = await response.json()
+        return Array.isArray(data) ? data[0] ?? null : data ?? null
+      } catch (err) {
+        console.error(`[supabase-db] findUnique ${table} error:`, err)
         return null
       }
-      return data
     },
 
     async findUniqueOrThrow(args: Record<string, unknown>) {

@@ -279,6 +279,100 @@ function applyFilters(
 }
 
 /** Build PostgREST select string from Prisma `include` or `select`. */
+/** Simple select string builder — no limit/order suffixes (PostgREST-safe). */
+function buildSelectStringSimple(
+  include: Record<string, unknown> | undefined,
+  select: Record<string, unknown> | undefined
+): string {
+  if (select && !include) {
+    return Object.entries(select).filter(([, v]) => v === true).map(([k]) => k).join(",")
+  }
+  if (!include) return "*"
+
+  const parts: string[] = ["*"]
+  for (const [relation, spec] of Object.entries(include)) {
+    const tableName = RELATION_MAP[relation] ?? relation
+    if (spec === true || spec === false) {
+      if (spec === true) parts.push(`${tableName}(*)`)
+      continue
+    }
+    if (typeof spec === "object" && spec !== null) {
+      if (relation === "_count") continue
+      const relSpec = spec as Record<string, unknown>
+      const nestedInclude = relSpec.include as Record<string, unknown> | undefined
+      const nestedSelect = relSpec.select as Record<string, unknown> | undefined
+
+      if (nestedInclude || nestedSelect) {
+        const innerParts: string[] = []
+        if (nestedSelect) {
+          for (const [k, v] of Object.entries(nestedSelect)) {
+            if (v === true) innerParts.push(k)
+          }
+        }
+        if (nestedInclude) {
+          for (const [k, v] of Object.entries(nestedInclude)) {
+            const innerTableName = RELATION_MAP[k] ?? k
+            if (v === true) innerParts.push(`${innerTableName}(*)`)
+            else if (typeof v === "object") {
+              const deepSelect = (v as Record<string, unknown>).select as Record<string, unknown> | undefined
+              if (deepSelect) {
+                const deepCols = Object.entries(deepSelect).filter(([, dv]) => dv === true).map(([dk]) => dk)
+                innerParts.push(`${innerTableName}(${deepCols.join(",")})`)
+              } else {
+                innerParts.push(`${innerTableName}(*)`)
+              }
+            }
+          }
+        }
+        parts.push(`${tableName}(${innerParts.join(",")})`)
+      } else {
+        parts.push(`${tableName}(*)`)
+      }
+    }
+  }
+  return parts.join(",")
+}
+
+/** Trim embedded resources based on Prisma include spec (take, orderBy). */
+function trimEmbedded(row: Record<string, unknown>, include: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...row }
+  for (const [relation, spec] of Object.entries(include)) {
+    if (relation === "_count") continue
+    const tableName = RELATION_MAP[relation] ?? relation
+    if (typeof spec === "object" && spec !== null && spec !== true && spec !== false) {
+      const relSpec = spec as Record<string, unknown>
+      let items = result[tableName]
+      if (Array.isArray(items)) {
+        // Apply orderBy
+        const orderBy = relSpec.orderBy as Record<string, string> | undefined
+        if (orderBy) {
+          const [field, dir] = Object.entries(orderBy)[0]
+          items = [...items].sort((a, b) => {
+            if (dir === "asc") return (a[field] ?? 0) > (b[field] ?? 0) ? 1 : -1
+            return (a[field] ?? 0) < (b[field] ?? 0) ? 1 : -1
+          })
+        }
+        // Apply take
+        const take = relSpec.take as number | undefined
+        if (take !== undefined) items = items.slice(0, take)
+        result[tableName] = items
+      }
+      // Recurse for nested includes
+      const nestedInclude = relSpec.include as Record<string, unknown> | undefined
+      if (nestedInclude && result[tableName] && typeof result[tableName] === "object") {
+        if (Array.isArray(result[tableName])) {
+          result[tableName] = result[tableName].map((item: Record<string, unknown>) =>
+            trimEmbedded(item, nestedInclude)
+          )
+        } else {
+          result[tableName] = trimEmbedded(result[tableName] as Record<string, unknown>, nestedInclude)
+        }
+      }
+    }
+  }
+  return result
+}
+
 function buildSelectString(
   include: Record<string, unknown> | undefined,
   select: Record<string, unknown> | undefined,
@@ -479,120 +573,39 @@ function createModelProxy(modelName: string) {
         distinct?: unknown
       }
 
-      const { selectStr, extraParams } = buildSelectString(include, select, table)
-
-      // Build PostgREST URL manually for reliable extra params
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-      const params = new URLSearchParams()
-      params.set("select", selectStr)
+      // Build select string (without embedded limit/order — those are handled in JS)
+      const selectStr = buildSelectStringSimple(include, select)
+      let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
 
       // Apply filters
       if (where) {
-        for (const [key, val] of Object.entries(where)) {
-          if (key === "OR" || key === "AND" || key === "NOT") continue
-          if (val === null) { params.set(key, "is.null"); continue }
-          if (typeof val === "object" && !Array.isArray(val) && !(val instanceof Date)) {
-            const ops = val as Record<string, unknown>
-            for (const [op, opVal] of Object.entries(ops)) {
-              if (op === "mode") continue
-              if (op === "equals") params.set(key, `eq.${opVal}`)
-              else if (op === "not" && opVal !== null && typeof opVal === "object") {
-                const inner = opVal as Record<string, unknown>
-                for (const [iop, ival] of Object.entries(inner)) {
-                  params.set(key, `not.${mapOp(iop)}.${ival}`)
-                }
-              } else if (op === "not") params.set(key, `not.eq.${opVal}`)
-              else if (op === "in") params.set(key, `in.(${(opVal as unknown[]).map(formatVal).join(",")})`)
-              else if (op === "contains") params.set(key, `${ops.mode === "insensitive" ? "ilike" : "like"}.*${opVal}*`)
-              else if (op === "gt" || op === "gte" || op === "lt" || op === "lte") params.set(key, `${op}.${opVal}`)
-              else params.set(key, `eq.${val}`)
-            }
-          } else {
-            params.set(key, `eq.${val}`)
-          }
-        }
-
-        // Handle OR
-        if (where.OR && Array.isArray(where.OR)) {
-          const orParts: string[] = []
-          for (const clause of where.OR as Record<string, unknown>[]) {
-            const parts: string[] = []
-            for (const [key, val] of Object.entries(clause)) {
-              if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-                const ops = val as Record<string, unknown>
-                for (const [op, opVal] of Object.entries(ops)) {
-                  if (op === "mode") continue
-                  if (op === "contains") {
-                    const mode = ops.mode === "insensitive" ? "ilike" : "like"
-                    parts.push(`${key}.${mode}.*${opVal}*`)
-                  } else if (op === "equals") {
-                    parts.push(`${key}.eq.${opVal}`)
-                  } else {
-                    parts.push(`${key}.${op}.${opVal}`)
-                  }
-                }
-              } else {
-                parts.push(`${key}.eq.${val}`)
-              }
-            }
-            orParts.push(parts.join(","))
-          }
-          params.set("or", `(${orParts.join(",")})`)
-        }
+        query = applyWhereClause(query, where)
       }
 
       // Apply ordering
       if (orderBy) {
-        if (Array.isArray(orderBy)) {
-          for (const ob of orderBy) {
-            if (typeof ob === "object" && ob !== null) {
-              const [field, dir] = Object.entries(ob as Record<string, string>)[0]
-              params.set("order", `${field}.${dir}`)
-            }
-          }
-        } else if (typeof orderBy === "object" && orderBy !== null) {
-          const [field, dir] = Object.entries(orderBy as Record<string, string>)[0]
-          params.set("order", `${field}.${dir}`)
-        }
+        query = applyOrdering(query, orderBy)
       }
 
       // Apply pagination
-      if (take !== undefined) {
-        params.set("limit", String(take))
-        if (skip !== undefined) {
-          const from = skip
-          const to = skip + take - 1
-          params.set("offset", String(from))
-        }
+      if (skip !== undefined && take !== undefined) {
+        query = query.range(skip, skip + take - 1)
+      } else if (take !== undefined) {
+        query = query.range(0, take - 1)
       }
 
-      // Apply extra PostgREST params (limit/order on embedded relations)
-      for (const [key, val] of Object.entries(extraParams)) {
-        params.set(key, val)
-      }
-
-      // Use raw fetch for reliable PostgREST query
-      const url = `${supabaseUrl}/rest/v1/${table}?${params.toString()}`
-      try {
-        const response = await fetch(url, {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-            "Content-Type": "application/json",
-            Prefer: "count=exact",
-          },
-        })
-        if (!response.ok) {
-          console.error(`[supabase-db] findMany ${table} error: ${response.status} ${response.statusText}`)
-          return []
-        }
-        const data = await response.json()
-        return Array.isArray(data) ? data : []
-      } catch (err) {
-        console.error(`[supabase-db] findMany ${table} error:`, err)
+      const { data, error } = await query
+      if (error) {
+        console.error(`[supabase-db] findMany ${table} error:`, error.message)
         return []
       }
+
+      // Post-process: trim embedded resources per include spec
+      let result = data ?? []
+      if (include) {
+        result = result.map((row: Record<string, unknown>) => trimEmbedded(row, include))
+      }
+      return result
     },
 
     async findFirst(args: Record<string, unknown> = {}) {
@@ -607,54 +620,19 @@ function createModelProxy(modelName: string) {
         select?: Record<string, unknown>
       }
 
-      const { selectStr, extraParams } = buildSelectString(include, select, table)
+      const selectStr = buildSelectStringSimple(include, select)
+      let query = supabaseAdmin.from(table).select(selectStr)
 
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-      const params = new URLSearchParams()
-      params.set("select", selectStr)
+      // Apply unique filters
+      query = applyWhereClause(query, where)
+      query = query.limit(1).maybeSingle()
 
-      // Apply filters
-      if (where) {
-        for (const [key, val] of Object.entries(where)) {
-          if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-            const ops = val as Record<string, unknown>
-            for (const [op, opVal] of Object.entries(ops)) {
-              if (op === "equals") params.set(key, `eq.${opVal}`)
-              else if (op === "in") params.set(key, `in.(${(opVal as unknown[]).map(formatVal).join(",")})`)
-              else params.set(key, `eq.${val}`)
-            }
-          } else {
-            params.set(key, `eq.${val}`)
-          }
-        }
-      }
-
-      for (const [key, val] of Object.entries(extraParams)) {
-        params.set(key, val)
-      }
-
-      params.set("limit", "1")
-
-      const url = `${supabaseUrl}/rest/v1/${table}?${params.toString()}`
-      try {
-        const response = await fetch(url, {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-            "Content-Type": "application/json",
-          },
-        })
-        if (!response.ok) {
-          console.error(`[supabase-db] findUnique ${table} error: ${response.status}`)
-          return null
-        }
-        const data = await response.json()
-        return Array.isArray(data) ? data[0] ?? null : data ?? null
-      } catch (err) {
-        console.error(`[supabase-db] findUnique ${table} error:`, err)
+      const { data, error } = await query
+      if (error) {
+        console.error(`[supabase-db] findUnique ${table} error:`, error.message)
         return null
       }
+      return data
     },
 
     async findUniqueOrThrow(args: Record<string, unknown>) {

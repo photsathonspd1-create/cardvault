@@ -41,11 +41,34 @@ export async function GET() {
       prismaError = String(err)
     }
 
+    // Test 5: check what select string the proxy builds
+    let selectStringInfo = ""
+    try {
+      // Manually test the embedded select that the proxy should build
+      const testSelect = "*,ListingImage(*),SellerProfile(*,User(name,username))"
+      const { data: test5Data, error: test5Err } = await supabaseAdmin
+        .from("Listing")
+        .select(testSelect)
+        .eq("status", "ACTIVE")
+        .limit(1)
+      selectStringInfo = JSON.stringify({
+        select: testSelect,
+        error: test5Err?.message,
+        count: test5Data?.length,
+        hasSellerProfile: test5Data?.[0] ? "SellerProfile" in test5Data[0] : false,
+        sellerProfileValue: test5Data?.[0]?.SellerProfile,
+        keys: test5Data?.[0] ? Object.keys(test5Data[0]) : [],
+      })
+    } catch (err) {
+      selectStringInfo = String(err)
+    }
+
     return NextResponse.json({
       test1_simple: { count: simple?.length ?? 0, error: e1?.message },
       test2_include: { count: withInclude?.length ?? 0, error: e2?.message, sample: withInclude?.[0]?.customName },
       test3_count: { count, error: e3?.message },
       test4_prisma: { count: prismaResult.length, error: prismaError, sample: prismaResult[0] },
+      test5_selectString: selectStringInfo,
     })
   } catch (err: unknown) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

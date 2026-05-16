@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-client"
+import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
@@ -23,10 +24,28 @@ export async function GET() {
       .select("*", { count: "exact", head: true })
       .eq("status", "ACTIVE")
 
+    // Test 4: prisma proxy findMany (what browse page uses)
+    let prismaResult: unknown[] = []
+    let prismaError: string | null = null
+    try {
+      prismaResult = await prisma.listing.findMany({
+        where: { status: "ACTIVE" },
+        include: {
+          images: { take: 1, orderBy: { order: "asc" } },
+          seller: { include: { user: { select: { name: true, username: true } } } },
+        },
+        take: 2,
+        orderBy: { createdAt: "desc" },
+      })
+    } catch (err) {
+      prismaError = String(err)
+    }
+
     return NextResponse.json({
       test1_simple: { count: simple?.length ?? 0, error: e1?.message },
       test2_include: { count: withInclude?.length ?? 0, error: e2?.message, sample: withInclude?.[0]?.customName },
       test3_count: { count, error: e3?.message },
+      test4_prisma: { count: prismaResult.length, error: prismaError, sample: prismaResult[0] },
     })
   } catch (err: unknown) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

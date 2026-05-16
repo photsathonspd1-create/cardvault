@@ -392,7 +392,7 @@ async function fetchIncludes(
     const take = relSpec.take as number | undefined
     const orderBy = relSpec.orderBy as Record<string, string> | undefined
 
-    // Build inner select for nested includes
+    // Build inner select for nested includes (avoid PostgREST nested selects via JS client)
     const nestedInclude = relSpec.include as Record<string, unknown> | undefined
     const nestedSelect = relSpec.select as Record<string, unknown> | undefined
     let innerSelect = "*"
@@ -401,23 +401,9 @@ async function fetchIncludes(
         .filter(([, v]) => v === true)
         .map(([k]) => k)
         .join(",")
-    } else if (nestedInclude) {
-      const parts = ["*"]
-      for (const [nk, nv] of Object.entries(nestedInclude)) {
-        const innerTableName = RELATION_MAP[nk] ?? nk
-        if (nv === true) parts.push(`${innerTableName}(*)`)
-        else if (typeof nv === "object" && nv !== null) {
-          const deepSelect = (nv as Record<string, unknown>).select as Record<string, unknown> | undefined
-          if (deepSelect) {
-            const deepCols = Object.entries(deepSelect).filter(([, dv]) => dv === true).map(([dk]) => dk)
-            parts.push(`${innerTableName}(${deepCols.join(",")})`)
-          } else {
-            parts.push(`${innerTableName}(*)`)
-          }
-        }
-      }
-      innerSelect = parts.join(",")
     }
+    // Skip nested includes in the PostgREST select — fetch them separately below
+    const pendingNested = nestedInclude || null
 
     const fk = guessForeignKey(parentTable, tableName)
     const isSingle = isOneToOne(parentTable, tableName)
@@ -453,6 +439,28 @@ async function fetchIncludes(
     } else {
       // Fallback: try both patterns
       console.warn(`[supabase-db] No FK mapping for ${parentTable} → ${tableName}`)
+    }
+
+    // Fetch nested includes separately (e.g., User inside SellerProfile)
+    if (pendingNested) {
+      const nestedRows = result.flatMap((r) => {
+        const val = r[tableName]
+        return Array.isArray(val) ? val : val ? [val] : []
+      }) as Record<string, unknown>[]
+      if (nestedRows.length > 0) {
+        try {
+          await fetchIncludes(tableName, nestedRows, pendingNested)
+          // If one-to-one, reassign back
+          if (isSingle) {
+            const val = result[0]?.[tableName]
+            if (val && !Array.isArray(val)) {
+              // Already mutated in-place since nestedRows contains the same object reference
+            }
+          }
+        } catch (nestedErr) {
+          console.error(`[supabase-db] nested fetchIncludes ${tableName} error:`, nestedErr)
+        }
+      }
     }
   }
 

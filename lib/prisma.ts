@@ -47,8 +47,92 @@ async function postgrestFetch<T = unknown[]>(
 }
 
 // ─── Relation name mapping (Prisma → PostgREST table names) ───────
+// SCOPED: keyed by parent table → relation → target table
+// This avoids collisions when the same relation name (e.g. "seller") 
+// maps to different tables depending on the parent.
+const RELATION_MAP_SCOPED: Record<string, Record<string, string>> = {
+  Listing: {
+    images: "ListingImage",
+    seller: "SellerProfile",
+    card: "CardCatalog",
+    shippingOptions: "ShippingOption",
+    orders: "Order",
+    reports: "Report",
+    watchlists: "Watchlist",
+    priceAlerts: "PriceAlert",
+  },
+  SellerProfile: {
+    user: "User",
+    bankAccount: "BankAccount",
+    subscription: "SellerSubscription",
+    listings: "Listing",
+  },
+  User: {
+    sellerProfile: "SellerProfile",
+    buyerOrders: "Order",
+    sellerOrders: "Order",
+    accounts: "Account",
+    sessions: "Session",
+    reviewsGiven: "Review",
+    reviewsReceived: "Review",
+    watchlist: "Watchlist",
+    notifications: "Notification",
+    disputes: "Dispute",
+    priceAlerts: "PriceAlert",
+    communityPosts: "CommunityPost",
+    postComments: "PostComment",
+    postLikes: "PostLike",
+    forumThreads: "ForumThread",
+    forumReplies: "ForumReply",
+    scammerReports: "ScammerReport",
+    reports: "Report",
+  },
+  Order: {
+    listing: "Listing",
+    buyer: "User",
+    seller: "User",
+    dispute: "Dispute",
+    review: "Review",
+    statusHistory: "OrderStatusHistory",
+  },
+  CardCatalog: {
+    priceHistory: "PriceHistory",
+    listings: "Listing",
+  },
+  CommunityPost: {
+    author: "User",
+    comments: "PostComment",
+    likes: "PostLike",
+  },
+  PostComment: {
+    author: "User",
+    post: "CommunityPost",
+    parent: "PostComment",
+    replies: "PostComment",
+  },
+  Dispute: {
+    order: "Order",
+    raisedBy: "User",
+    evidence: "DisputeEvidence",
+  },
+  Review: {
+    order: "Order",
+    reviewer: "User",
+    reviewee: "User",
+  },
+  Report: {
+    listing: "Listing",
+    reporter: "User",
+  },
+}
+
+/** Resolve a Prisma relation name to a PostgREST table name, scoped by parent table. */
+function resolveRelation(parentTable: string, relation: string): string {
+  return RELATION_MAP_SCOPED[parentTable]?.[relation] ?? relation
+}
+
+// Keep a flat fallback map for contexts where parent table is unknown
 const RELATION_MAP: Record<string, string> = {
-  // Listing
   images: "ListingImage",
   seller: "SellerProfile",
   card: "CardCatalog",
@@ -57,12 +141,10 @@ const RELATION_MAP: Record<string, string> = {
   reports: "Report",
   watchlists: "Watchlist",
   priceAlerts: "PriceAlert",
-  // SellerProfile
   user: "User",
   bankAccount: "BankAccount",
   subscription: "SellerSubscription",
   listings: "Listing",
-  // User
   sellerProfile: "SellerProfile",
   buyerOrders: "Order",
   sellerOrders: "Order",
@@ -73,41 +155,29 @@ const RELATION_MAP: Record<string, string> = {
   watchlist: "Watchlist",
   notifications: "Notification",
   disputes: "Dispute",
-  priceAlerts: "PriceAlert",
   communityPosts: "CommunityPost",
   postComments: "PostComment",
   postLikes: "PostLike",
   forumThreads: "ForumThread",
   forumReplies: "ForumReply",
   scammerReports: "ScammerReport",
-  reports: "Report",
-  // Order
   listing: "Listing",
   buyer: "User",
-  seller: "User",
   dispute: "Dispute",
   review: "Review",
   statusHistory: "OrderStatusHistory",
-  // CardCatalog
   priceHistory: "PriceHistory",
-  // CommunityPost
   author: "User",
   comments: "PostComment",
   likes: "PostLike",
-  // PostComment
   post: "CommunityPost",
   parent: "PostComment",
   replies: "PostComment",
-  // Dispute
   order: "Order",
   raisedBy: "User",
   evidence: "DisputeEvidence",
-  // Review
-  order: "Order",
   reviewer: "User",
   reviewee: "User",
-  // Report
-  listing: "Listing",
   reporter: "User",
 }
 
@@ -320,7 +390,8 @@ function applyFilters(
 /** Simple select string builder — no limit/order suffixes (PostgREST-safe). */
 function buildSelectStringSimple(
   include: Record<string, unknown> | undefined,
-  select: Record<string, unknown> | undefined
+  select: Record<string, unknown> | undefined,
+  parentTable: string = ""
 ): string {
   if (select && !include) {
     return Object.entries(select).filter(([, v]) => v === true).map(([k]) => k).join(",")
@@ -329,7 +400,7 @@ function buildSelectStringSimple(
 
   const parts: string[] = ["*"]
   for (const [relation, spec] of Object.entries(include)) {
-    const tableName = RELATION_MAP[relation] ?? relation
+    const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
     if (spec === true || spec === false) {
       if (spec === true) parts.push(`${tableName}(*)`)
       continue
@@ -349,7 +420,7 @@ function buildSelectStringSimple(
         }
         if (nestedInclude) {
           for (const [k, v] of Object.entries(nestedInclude)) {
-            const innerTableName = RELATION_MAP[k] ?? k
+            const innerTableName = resolveRelation(tableName, k)
             if (v === true) innerParts.push(`${innerTableName}(*)`)
             else if (typeof v === "object") {
               const deepSelect = (v as Record<string, unknown>).select as Record<string, unknown> | undefined
@@ -374,7 +445,8 @@ function buildSelectStringSimple(
 /** Apply Prisma-style `take` on nested relation arrays (PostgREST returns all). */
 function applyNestedTake(
   rows: Record<string, unknown>[],
-  include: Record<string, unknown>
+  include: Record<string, unknown>,
+  parentTable: string = ""
 ): Record<string, unknown>[] {
   for (const [relation, spec] of Object.entries(include)) {
     if (!spec || typeof spec !== "object" || spec === true || spec === false) continue
@@ -382,7 +454,7 @@ function applyNestedTake(
     const take = relSpec.take as number | undefined
     if (take === undefined) continue
 
-    const tableName = RELATION_MAP[relation] ?? relation
+    const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
     for (const row of rows) {
       const val = row[tableName]
       if (Array.isArray(val)) {
@@ -419,7 +491,7 @@ async function fetchIncludes(
 
   for (const [relation, spec] of Object.entries(include)) {
     if (relation === "_count") continue
-    const tableName = RELATION_MAP[relation] ?? relation
+    const tableName = resolveRelation(parentTable, relation)
     if (typeof spec !== "object" || spec === null || spec === true || spec === false) {
       if (spec === true) {
         const fk = guessForeignKey(parentTable, tableName)
@@ -576,7 +648,7 @@ function buildSelectString(
 
   for (const [relation, spec] of Object.entries(include)) {
     // Map Prisma relation name → PostgREST table name
-    const tableName = RELATION_MAP[relation] ?? relation
+    const tableName = resolveRelation(_model, relation)
 
     if (spec === true || spec === false) {
       if (spec === true) parts.push(`${tableName}(*)`)
@@ -608,7 +680,7 @@ function buildSelectString(
         }
         if (nestedInclude) {
           for (const [k, v] of Object.entries(nestedInclude)) {
-            const innerTableName = RELATION_MAP[k] ?? k
+            const innerTableName = resolveRelation(tableName, k)
             if (v === true) {
               innerParts.push(`${innerTableName}(*)`)
             } else if (typeof v === "object") {
@@ -869,7 +941,7 @@ function createModelProxy(modelName: string) {
       }
 
       // Build embedded select string (e.g. "*,ListingImage(*),SellerProfile(*,User(name,username))")
-      const selectStr = buildSelectStringSimple(include, select)
+      const selectStr = buildSelectStringSimple(include, select, table)
 
       // Build PostgREST params
       const pgParams: Record<string, string> = {
@@ -931,7 +1003,7 @@ function createModelProxy(modelName: string) {
       // Apply Prisma-style take on nested relations (PostgREST returns all nested rows)
       let result = data ?? []
       if (include && result.length > 0) {
-        result = applyNestedTake(result, include)
+        result = applyNestedTake(result, include, table)
       }
       return result
     },
@@ -948,7 +1020,7 @@ function createModelProxy(modelName: string) {
         select?: Record<string, unknown>
       }
 
-      const selectStr = buildSelectStringSimple(include, select)
+      const selectStr = buildSelectStringSimple(include, select, table)
       const pgFilters = buildPostgrestFilters(where)
 
       // Use raw PostgREST fetch
@@ -977,7 +1049,7 @@ function createModelProxy(modelName: string) {
       if (!data || data.length === 0) return null
       let result = data[0]
       if (include) {
-        result = applyNestedTake([result], include)[0]
+        result = applyNestedTake([result], include, table)[0]
       }
       return result
     },

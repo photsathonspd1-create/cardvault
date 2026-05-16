@@ -32,6 +32,7 @@ export async function middleware(request: NextRequest) {
     "/api/cards",
     "/api/reports/scammer/check",
     "/api/webhooks",
+    "/api/debug",
   ]
 
   const isPublicPath = publicPaths.some(

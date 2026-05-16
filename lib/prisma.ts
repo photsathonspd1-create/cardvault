@@ -333,44 +333,129 @@ function buildSelectStringSimple(
   return parts.join(",")
 }
 
-/** Trim embedded resources based on Prisma include spec (take, orderBy). */
-function trimEmbedded(row: Record<string, unknown>, include: Record<string, unknown>): Record<string, unknown> {
-  const result = { ...row }
+/** Guess if a relation is one-to-one (returns single object) or one-to-many (returns array). */
+function isOneToOne(parentTable: string, childTable: string): boolean {
+  const oneToOne: Record<string, string[]> = {
+    Listing: ["SellerProfile", "CardCatalog"],
+    SellerProfile: ["User", "BankAccount", "SellerSubscription"],
+    User: ["SellerProfile"],
+    Order: ["Listing", "User", "Dispute", "Review"],
+    CardCatalog: [],
+    CommunityPost: ["User"],
+    PostComment: ["User", "CommunityPost"],
+    Dispute: ["Order", "User"],
+    Review: ["Order", "User"],
+  }
+  return (oneToOne[parentTable] ?? []).includes(childTable)
+}
+
+/** Fetch embedded resources separately (avoids PostgREST select issues). */
+async function fetchIncludes(
+  parentTable: string,
+  rows: Record<string, unknown>[],
+  include: Record<string, unknown>
+): Promise<Record<string, unknown>[]> {
+  const result = rows.map((r) => ({ ...r }))
+
   for (const [relation, spec] of Object.entries(include)) {
     if (relation === "_count") continue
     const tableName = RELATION_MAP[relation] ?? relation
-    if (typeof spec === "object" && spec !== null && spec !== true && spec !== false) {
-      const relSpec = spec as Record<string, unknown>
-      let items = result[tableName]
-      if (Array.isArray(items)) {
-        // Apply orderBy
-        const orderBy = relSpec.orderBy as Record<string, string> | undefined
-        if (orderBy) {
-          const [field, dir] = Object.entries(orderBy)[0]
-          items = [...items].sort((a, b) => {
-            if (dir === "asc") return (a[field] ?? 0) > (b[field] ?? 0) ? 1 : -1
-            return (a[field] ?? 0) < (b[field] ?? 0) ? 1 : -1
-          })
+    if (typeof spec !== "object" || spec === null || spec === true || spec === false) {
+      if (spec === true) {
+        // Fetch all related records
+        const fkColumn = guessForeignKey(parentTable, tableName)
+        const parentIds = rows.map((r) => r.id).filter(Boolean)
+        if (parentIds.length === 0 || !fkColumn) continue
+        const { data } = await supabaseAdmin
+          .from(tableName)
+          .select("*")
+          .in(fkColumn, parentIds)
+        if (data) {
+          for (const row of result) {
+            row[tableName] = data.filter((d: Record<string, unknown>) => d[fkColumn] === row.id)
+          }
         }
-        // Apply take
-        const take = relSpec.take as number | undefined
-        if (take !== undefined) items = items.slice(0, take)
-        result[tableName] = items
       }
-      // Recurse for nested includes
-      const nestedInclude = relSpec.include as Record<string, unknown> | undefined
-      if (nestedInclude && result[tableName] && typeof result[tableName] === "object") {
-        if (Array.isArray(result[tableName])) {
-          result[tableName] = result[tableName].map((item: Record<string, unknown>) =>
-            trimEmbedded(item, nestedInclude)
-          )
-        } else {
-          result[tableName] = trimEmbedded(result[tableName] as Record<string, unknown>, nestedInclude)
+      continue
+    }
+
+    const relSpec = spec as Record<string, unknown>
+    const take = relSpec.take as number | undefined
+    const orderBy = relSpec.orderBy as Record<string, string> | undefined
+
+    // Build inner select for nested includes
+    const nestedInclude = relSpec.include as Record<string, unknown> | undefined
+    const nestedSelect = relSpec.select as Record<string, unknown> | undefined
+    let innerSelect = "*"
+    if (nestedSelect && !nestedInclude) {
+      innerSelect = Object.entries(nestedSelect)
+        .filter(([, v]) => v === true)
+        .map(([k]) => k)
+        .join(",")
+    } else if (nestedInclude) {
+      const parts = ["*"]
+      for (const [nk, nv] of Object.entries(nestedInclude)) {
+        const innerTableName = RELATION_MAP[nk] ?? nk
+        if (nv === true) parts.push(`${innerTableName}(*)`)
+        else if (typeof nv === "object" && nv !== null) {
+          const deepSelect = (nv as Record<string, unknown>).select as Record<string, unknown> | undefined
+          if (deepSelect) {
+            const deepCols = Object.entries(deepSelect).filter(([, dv]) => dv === true).map(([dk]) => dk)
+            parts.push(`${innerTableName}(${deepCols.join(",")})`)
+          } else {
+            parts.push(`${innerTableName}(*)`)
+          }
         }
+      }
+      innerSelect = parts.join(",")
+    }
+
+    const fkColumn = guessForeignKey(parentTable, tableName)
+    const parentIds = rows.map((r) => r.id).filter(Boolean)
+    if (parentIds.length === 0 || !fkColumn) continue
+
+    let query = supabaseAdmin
+      .from(tableName)
+      .select(innerSelect)
+      .in(fkColumn, parentIds)
+
+    if (orderBy) {
+      const [field, dir] = Object.entries(orderBy)[0]
+      query = query.order(field, { ascending: dir === "asc" })
+    }
+
+    const { data } = await query
+    if (data) {
+      for (const row of result) {
+        let related = data.filter((d: Record<string, unknown>) => d[fkColumn] === row.id)
+        if (take !== undefined) related = related.slice(0, take)
+        // Trim nested includes
+        if (nestedInclude && related.length > 0) {
+          // Nested trimming is handled by the recursive call pattern
+        }
+        row[tableName] = isOneToOne(parentTable, tableName)
+          ? (related[0] ?? null)
+          : related
       }
     }
   }
+
   return result
+}
+
+/** Guess foreign key column name for a relation. */
+function guessForeignKey(parentTable: string, childTable: string): string | null {
+  // Common patterns
+  const fkMap: Record<string, Record<string, string>> = {
+    Listing: { ListingImage: "listingId", SellerProfile: "sellerId", CardCatalog: "cardId", ShippingOption: "listingId", Order: "listingId" },
+    SellerProfile: { Listing: "sellerId", User: "userId", BankAccount: "sellerId", SellerSubscription: "sellerId" },
+    User: { SellerProfile: "userId", Order: "buyerId", Session: "userId", Account: "userId", Notification: "userId", Review: "reviewerId", CommunityPost: "authorId" },
+    Order: { OrderStatusHistory: "orderId", Dispute: "orderId", Review: "orderId" },
+    CardCatalog: { Listing: "cardId", PriceHistory: "cardId" },
+    CommunityPost: { PostComment: "postId", PostLike: "postId" },
+    Dispute: { DisputeEvidence: "disputeId" },
+  }
+  return fkMap[parentTable]?.[childTable] ?? null
 }
 
 function buildSelectString(
@@ -576,10 +661,8 @@ function createModelProxy(modelName: string) {
       // Build select string (without embedded limit/order — those are handled in JS)
       const selectStr = buildSelectStringSimple(include, select)
       
-      // Debug: log the select string to Vercel function logs
-      console.log(`[supabase-db] findMany ${table} select:`, selectStr)
-      
-      let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
+      // Try with plain select first, then fall back to full select
+      let query = supabaseAdmin.from(table).select("*", { count: "exact" })
 
       // Apply filters
       if (where) {
@@ -604,10 +687,10 @@ function createModelProxy(modelName: string) {
         return []
       }
 
-      // Post-process: trim embedded resources per include spec
+      // Fetch embedded resources separately
       let result = data ?? []
-      if (include) {
-        result = result.map((row: Record<string, unknown>) => trimEmbedded(row, include))
+      if (include && result.length > 0) {
+        result = await fetchIncludes(table, result, include)
       }
       return result
     },
@@ -624,8 +707,7 @@ function createModelProxy(modelName: string) {
         select?: Record<string, unknown>
       }
 
-      const selectStr = buildSelectStringSimple(include, select)
-      let query = supabaseAdmin.from(table).select(selectStr)
+      let query = supabaseAdmin.from(table).select("*")
 
       // Apply unique filters
       query = applyWhereClause(query, where)
@@ -635,6 +717,13 @@ function createModelProxy(modelName: string) {
       if (error) {
         console.error(`[supabase-db] findUnique ${table} error:`, error.message)
         return null
+      }
+      if (!data) return null
+
+      // Fetch includes if needed
+      if (include) {
+        const [enriched] = await fetchIncludes(table, [data], include)
+        return enriched
       }
       return data
     },

@@ -8,6 +8,42 @@
 
 import { supabaseAdmin } from "./supabase-client"
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+
+// ─── Raw PostgREST fetch (bypasses Supabase JS client limitations) ──
+async function postgrestFetch<T = unknown[]>(
+  table: string,
+  params: Record<string, string>,
+  signal?: AbortSignal
+): Promise<{ data: T | null; error: string | null }> {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`)
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v)
+  }
+
+  try {
+    const res = await fetch(url.toString(), {
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        Prefer: "return=representation",
+      },
+      signal,
+    })
+
+    if (!res.ok) {
+      const body = await res.text()
+      return { data: null, error: `PostgREST ${res.status}: ${body}` }
+    }
+
+    const data = await res.json()
+    return { data: data as T, error: null }
+  } catch (err: unknown) {
+    return { data: null, error: String(err) }
+  }
+}
+
 // ─── Relation name mapping (Prisma → PostgREST table names) ───────
 const RELATION_MAP: Record<string, string> = {
   // Listing
@@ -614,6 +650,119 @@ function buildSelectString(
   return { selectStr: parts.join(","), extraParams }
 }
 
+/** Build PostgREST filter params from a Prisma where clause. */
+function buildPostgrestFilters(where: Record<string, unknown>): Record<string, string> {
+  const params: Record<string, string> = {}
+
+  for (const [key, val] of Object.entries(where)) {
+    if (key === "OR" || key === "AND" || key === "NOT") {
+      // Handle OR as PostgREST or param
+      if (key === "OR" && Array.isArray(val)) {
+        const orParts: string[] = []
+        for (const clause of val) {
+          const parts: string[] = []
+          for (const [k, v] of Object.entries(clause as Record<string, unknown>)) {
+            if (v === null) {
+              parts.push(`${k}.is.null`)
+            } else if (typeof v === "object" && !Array.isArray(v) && !(v instanceof Date)) {
+              const ops = v as Record<string, unknown>
+              for (const [op, opVal] of Object.entries(ops)) {
+                if (op === "contains") {
+                  const mode = (ops as Record<string, unknown>).mode === "insensitive" ? "ilike" : "like"
+                  parts.push(`${k}.${mode}.*${opVal}*`)
+                } else if (op === "in") {
+                  parts.push(`${k}.in.(${(opVal as unknown[]).map(formatVal).join(",")})`)
+                } else if (op === "equals") {
+                  parts.push(`${k}.eq.${formatVal(opVal)}`)
+                } else if (op === "not") {
+                  if (opVal === null) parts.push(`${k}.not.is.null`)
+                  else parts.push(`${k}.not.eq.${formatVal(opVal)}`)
+                } else {
+                  parts.push(`${k}.${op}.${formatVal(opVal)}`)
+                }
+              }
+            } else {
+              parts.push(`${k}.eq.${formatVal(v)}`)
+            }
+          }
+          orParts.push(parts.join(","))
+        }
+        params.or = `(${orParts.join("),(")})`
+      }
+      continue
+    }
+
+    if (val === null) {
+      params[key] = "is.null"
+    } else if (typeof val === "object" && !Array.isArray(val) && !(val instanceof Date)) {
+      const ops = val as Record<string, unknown>
+      for (const [op, opVal] of Object.entries(ops)) {
+        if (op === "mode") continue
+        if (op === "not") {
+          if (opVal === null) {
+            params[key] = "not.is.null"
+          } else if (typeof opVal === "object") {
+            const innerOps = opVal as Record<string, unknown>
+            for (const [innerOp, innerVal] of Object.entries(innerOps)) {
+              if (innerOp === "in") {
+                params[key] = `not.in.(${(innerVal as unknown[]).map(formatVal).join(",")})`
+              } else {
+                params[key] = `not.${mapOp(innerOp)}.${formatVal(innerVal)}`
+              }
+            }
+          } else {
+            params[key] = `not.eq.${formatVal(opVal)}`
+          }
+        } else if (op === "in") {
+          params[key] = `in.(${(opVal as unknown[]).map(formatVal).join(",")})`
+        } else if (op === "notIn") {
+          params[key] = `not.in.(${(opVal as unknown[]).map(formatVal).join(",")})`
+        } else if (op === "contains") {
+          const mode = (ops as Record<string, unknown>).mode === "insensitive" ? "ilike" : "like"
+          params[key] = `${mode}.*${opVal}*`
+        } else if (op === "startsWith") {
+          params[key] = `like.${opVal}*`
+        } else if (op === "endsWith") {
+          params[key] = `like.*${opVal}`
+        } else if (op === "gt" || op === "gte" || op === "lt" || op === "lte") {
+          params[key] = `${op}.${opVal instanceof Date ? opVal.toISOString() : opVal}`
+        } else if (op === "equals") {
+          params[key] = `eq.${opVal instanceof Date ? opVal.toISOString() : opVal}`
+        } else if (op === "is") {
+          if (opVal === null) params[key] = "is.null"
+        } else if (op === "isNot") {
+          if (opVal === null) params[key] = "not.is.null"
+        }
+      }
+    } else {
+      params[key] = `eq.${val instanceof Date ? val.toISOString() : val}`
+    }
+  }
+
+  return params
+}
+
+/** Build PostgREST order string from Prisma orderBy. */
+function buildOrderString(orderBy: unknown): string | null {
+  if (!orderBy) return null
+
+  const parts: string[] = []
+
+  if (Array.isArray(orderBy)) {
+    for (const ob of orderBy) {
+      if (typeof ob === "object" && ob !== null) {
+        const [field, dir] = Object.entries(ob as Record<string, string>)[0]
+        parts.push(`${field}.${dir}`)
+      }
+    }
+  } else if (typeof orderBy === "object" && orderBy !== null) {
+    const [field, dir] = Object.entries(orderBy as Record<string, string>)[0]
+    parts.push(`${field}.${dir}`)
+  }
+
+  return parts.length > 0 ? parts.join(",") : null
+}
+
 /** Apply ordering to query. */
 function applyOrdering(
   query: ReturnType<typeof supabaseAdmin.from>,
@@ -720,56 +869,61 @@ function createModelProxy(modelName: string) {
       // Build embedded select string (e.g. "*,ListingImage(*),SellerProfile(*,User(name,username))")
       const selectStr = buildSelectStringSimple(include, select)
 
-      // Use the embedded select directly — PostgREST handles nested relations in one query
-      let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
+      // Build PostgREST params
+      const pgParams: Record<string, string> = {
+        select: selectStr,
+      }
 
-      // Apply filters
+      // Apply filters as PostgREST params
       if (where) {
-        query = applyWhereClause(query, where)
+        const pgFilters = buildPostgrestFilters(where)
+        Object.assign(pgParams, pgFilters)
       }
 
       // Apply ordering
       if (orderBy) {
-        query = applyOrdering(query, orderBy)
+        const orderStr = buildOrderString(orderBy)
+        if (orderStr) pgParams.order = orderStr
       }
 
       // Apply pagination
       if (skip !== undefined && take !== undefined) {
-        query = query.range(skip, skip + take - 1)
+        // PostgREST Range header — we'll use limit/offset params instead
+        pgParams.limit = String(take)
+        pgParams.offset = String(skip)
       } else if (take !== undefined) {
-        query = query.range(0, take - 1)
+        pgParams.limit = String(take)
       }
 
-      const { data, error } = await query
+      // Try raw PostgREST fetch first (handles nested selects correctly)
+      const { data, error } = await postgrestFetch<Record<string, unknown>[]>(table, pgParams)
+
       if (error) {
-        console.error(`[supabase-db] findMany ${table} error:`, error.message)
-        // Fallback: try with plain select if embedded select fails
-        if (include) {
-          console.warn(`[supabase-db] Retrying ${table} with plain select + fetchIncludes fallback`)
-          let fallbackQuery = supabaseAdmin.from(table).select("*", { count: "exact" })
-          if (where) fallbackQuery = applyWhereClause(fallbackQuery, where)
-          if (orderBy) fallbackQuery = applyOrdering(fallbackQuery, orderBy)
-          if (skip !== undefined && take !== undefined) {
-            fallbackQuery = fallbackQuery.range(skip, skip + take - 1)
-          } else if (take !== undefined) {
-            fallbackQuery = fallbackQuery.range(0, take - 1)
-          }
-          const { data: fallbackData, error: fallbackError } = await fallbackQuery
-          if (fallbackError) {
-            console.error(`[supabase-db] fallback findMany ${table} error:`, fallbackError.message)
-            return []
-          }
-          let result = fallbackData ?? []
-          if (result.length > 0) {
-            try {
-              result = await fetchIncludes(table, result, include)
-            } catch (incErr) {
-              console.error(`[supabase-db] fetchIncludes fallback ${table} error:`, incErr)
-            }
-          }
-          return result
+        console.error(`[supabase-db] findMany ${table} PostgREST error:`, error)
+        // Fallback: Supabase JS client with plain select + fetchIncludes
+        console.warn(`[supabase-db] Retrying ${table} with Supabase JS fallback`)
+        let fallbackQuery = supabaseAdmin.from(table).select("*", { count: "exact" })
+        if (where) fallbackQuery = applyWhereClause(fallbackQuery, where)
+        if (orderBy) fallbackQuery = applyOrdering(fallbackQuery, orderBy)
+        if (skip !== undefined && take !== undefined) {
+          fallbackQuery = fallbackQuery.range(skip, skip + take - 1)
+        } else if (take !== undefined) {
+          fallbackQuery = fallbackQuery.range(0, take - 1)
         }
-        return []
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery
+        if (fallbackError) {
+          console.error(`[supabase-db] fallback findMany ${table} error:`, fallbackError.message)
+          return []
+        }
+        let result = fallbackData ?? []
+        if (include && result.length > 0) {
+          try {
+            result = await fetchIncludes(table, result, include)
+          } catch (incErr) {
+            console.error(`[supabase-db] fetchIncludes fallback ${table} error:`, incErr)
+          }
+        }
+        return result
       }
 
       // Apply Prisma-style take on nested relations (PostgREST returns all nested rows)
@@ -793,22 +947,23 @@ function createModelProxy(modelName: string) {
       }
 
       const selectStr = buildSelectStringSimple(include, select)
-      let query = supabaseAdmin.from(table).select(selectStr)
+      const pgFilters = buildPostgrestFilters(where)
 
-      // Apply unique filters
-      query = applyWhereClause(query, where)
-      query = query.limit(1).maybeSingle()
+      // Use raw PostgREST fetch
+      const { data, error } = await postgrestFetch<Record<string, unknown>[]>(
+        table,
+        { select: selectStr, limit: "1", ...pgFilters }
+      )
 
-      const { data, error } = await query
       if (error) {
-        console.error(`[supabase-db] findUnique ${table} error:`, error.message)
-        // Fallback: plain select + fetchIncludes
+        console.error(`[supabase-db] findUnique ${table} PostgREST error:`, error)
+        // Fallback: Supabase JS
+        let fb = supabaseAdmin.from(table).select("*")
+        fb = applyWhereClause(fb, where)
+        fb = fb.limit(1).maybeSingle()
+        const { data: fbData, error: fbErr } = await fb
+        if (fbErr || !fbData) return null
         if (include) {
-          let fb = supabaseAdmin.from(table).select("*")
-          fb = applyWhereClause(fb, where)
-          fb = fb.limit(1).maybeSingle()
-          const { data: fbData, error: fbErr } = await fb
-          if (fbErr || !fbData) return null
           try {
             const [enriched] = await fetchIncludes(table, [fbData], include)
             return enriched
@@ -816,12 +971,13 @@ function createModelProxy(modelName: string) {
         }
         return null
       }
-      if (!data) return null
 
+      if (!data || data.length === 0) return null
+      let result = data[0]
       if (include) {
-        return applyNestedTake([data], include)[0]
+        result = applyNestedTake([result], include)[0]
       }
-      return data
+      return result
     },
 
     async findUniqueOrThrow(args: Record<string, unknown>) {
@@ -1086,20 +1242,60 @@ function createModelProxy(modelName: string) {
     async count(args: Record<string, unknown> = {}) {
       const { where } = args as { where?: Record<string, unknown> }
 
-      let query = supabaseAdmin
-        .from(table)
-        .select("*", { count: "exact", head: true })
-
+      // Use raw PostgREST fetch with head=true for count
+      const pgParams: Record<string, string> = {
+        select: "*",
+        Prefer: "count=exact",
+      }
       if (where) {
-        query = applyWhereClause(query, where)
+        Object.assign(pgParams, buildPostgrestFilters(where))
       }
 
-      const { count, error } = await query
-      if (error) {
-        console.error(`[supabase-db] count ${table} error:`, error.message)
-        return 0
+      const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`)
+      for (const [k, v] of Object.entries(pgParams)) {
+        if (k === "Prefer") continue
+        url.searchParams.set(k, v)
       }
-      return count ?? 0
+
+      try {
+        const res = await fetch(url.toString(), {
+          method: "HEAD",
+          headers: {
+            apikey: SUPABASE_SERVICE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            Prefer: "count=exact",
+            Range: "0-0",
+          },
+        })
+
+        const contentRange = res.headers.get("content-range")
+        if (contentRange) {
+          // Format: "0-0/12" — total is after the slash
+          const total = parseInt(contentRange.split("/")[1])
+          if (!isNaN(total)) return total
+        }
+
+        // Fallback: Supabase JS client
+        let query = supabaseAdmin
+          .from(table)
+          .select("*", { count: "exact", head: true })
+        if (where) query = applyWhereClause(query, where)
+        const { count, error } = await query
+        if (error) {
+          console.error(`[supabase-db] count ${table} error:`, error.message)
+          return 0
+        }
+        return count ?? 0
+      } catch {
+        // Fallback to Supabase JS
+        let query = supabaseAdmin
+          .from(table)
+          .select("*", { count: "exact", head: true })
+        if (where) query = applyWhereClause(query, where)
+        const { count, error } = await query
+        if (error) return 0
+        return count ?? 0
+      }
     },
 
     async aggregate(args: Record<string, unknown>) {

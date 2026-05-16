@@ -31,10 +31,12 @@ import {
   Loader2,
   CheckCircle,
   Search,
+  Camera,
 } from "lucide-react"
 
 const STEPS = [
-  { title: "ข้อมูลการ์ด", description: "เลือกการ์ดหรือกรอกข้อมูลเอง" },
+  { title: "สแกนการ์ด", description: "ถ่ายรูปการ์ดหรือกรอกข้อมูลเอง" },
+  { title: "ข้อมูลการ์ด", description: "ตรวจสอบข้อมูลการ์ด" },
   { title: "สภาพ & รายละเอียด", description: "สภาพการ์ดและข้อมูลเพิ่มเติม" },
   { title: "รูปภาพ", description: "อัปโหลดรูปการ์ด" },
   { title: "ราคา & จัดส่ง", description: "ตั้งราคาและตัวเลือกจัดส่ง" },
@@ -45,6 +47,7 @@ export default function NewListingPage() {
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showScanner, setShowScanner] = useState(false)
 
   const [form, setForm] = useState({
     // Card info
@@ -79,7 +82,7 @@ export default function NewListingPage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const progress = ((step + 1) / STEPS.length) * 100
+  const progress = (step / (STEPS.length - 1)) * 100
 
   async function handleSubmit() {
     setError("")
@@ -135,12 +138,14 @@ export default function NewListingPage() {
   function canProceed(): boolean {
     switch (step) {
       case 0:
-        return !!form.series && !!form.customName
+        return true // Scanner step - always can proceed
       case 1:
-        return !!form.condition
+        return !!form.series && !!form.customName
       case 2:
-        return true // Images are optional
+        return !!form.condition
       case 3:
+        return true // Images are optional
+      case 4:
         return !!form.price && parseFloat(form.price) > 0
       default:
         return false
@@ -177,6 +182,69 @@ export default function NewListingPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 0 && (
+            <div className="space-y-6">
+              <div className="text-center py-8">
+                <Camera className="h-16 w-16 mx-auto text-purple-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">สแกนการ์ดของคุณ</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  ถ่ายรูปการ์ดเพื่อให้ระบบระบุข้อมูลอัตโนมัติ หรือกรอกข้อมูลเองในขั้นตอนถัดไป
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    variant="purple"
+                    onClick={() => {
+                      // In production: open camera scanner
+                      // For now: use file input as fallback
+                      const input = document.createElement("input")
+                      input.type = "file"
+                      input.accept = "image/*"
+                      input.capture = "environment"
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0]
+                        if (!file) return
+                        // Convert to base64 for identification
+                        const reader = new FileReader()
+                        reader.onload = async () => {
+                          try {
+                            const res = await fetch("/api/cards/identify", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ imageBase64: reader.result }),
+                            })
+                            const data = await res.json()
+                            if (data.matches?.length > 0) {
+                              const card = data.matches[0]
+                              updateForm("series", card.series)
+                              updateForm("customName", card.name)
+                              updateForm("customSet", card.setName)
+                              updateForm("cardNumber", card.cardNumber)
+                              updateForm("rarity", card.rarity)
+                            }
+                          } catch (err) {
+                            console.error("Card identification failed:", err)
+                          }
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                      input.click()
+                    }}
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    ถ่ายรูปสแกน
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(1)}
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    กรอกข้อมูลเอง
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
             <>
               <div className="space-y-2">
                 <Label>ซีรีส์ *</Label>
@@ -236,7 +304,7 @@ export default function NewListingPage() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 4 && (
             <>
               <div className="space-y-2">
                 <Label>สภาพการ์ด *</Label>
@@ -331,7 +399,7 @@ export default function NewListingPage() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 4 && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 {form.images.map((img, i) => (
@@ -369,7 +437,7 @@ export default function NewListingPage() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

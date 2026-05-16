@@ -26,6 +26,9 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [paymentStep, setPaymentStep] = useState(false)
+  const [paymentData, setPaymentData] = useState<any>(null)
+  const [orderId, setOrderId] = useState<string>("")
 
   const [form, setForm] = useState({
     shippingName: "",
@@ -110,8 +113,86 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
     return (
       <div className="container px-4 py-20 text-center">
         <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">สร้างออเดอร์สำเร็จ!</h1>
+        <h1 className="text-2xl font-bold mb-2">ชำระเงินสำเร็จ!</h1>
         <p className="text-muted-foreground">กำลังนำไปยังหน้าออเดอร์...</p>
+      </div>
+    )
+  }
+
+  // Calculate total early for payment step
+  const shippingOpt = listing?.shippingOptions?.find(
+    (s: any) => s.provider === form.shippingProvider
+  )
+  const sub = listing?.price ?? 0
+  const sFee = shippingOpt?.price ?? 0
+  const totalAmount = sub + sFee
+
+  // Payment step — show QR code or card form
+  if (paymentStep && paymentData) {
+    return (
+      <div className="container px-4 py-8 max-w-lg mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">ชำระเงิน</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {form.paymentMethod === "promptpay" && paymentData.qrCodeUrl ? (
+              <div className="text-center space-y-4">
+                <p className="text-sm text-muted-foreground">สแกน QR Code เพื่อชำระเงิน</p>
+                <div className="bg-white p-6 rounded-lg inline-block">
+                  <div className="w-64 h-64 bg-muted flex items-center justify-center rounded">
+                    <p className="text-xs text-muted-foreground text-center px-4">
+                      QR Code<br/>
+                      <span className="font-mono text-[10px] break-all">{paymentData.qrCodeUrl}</span>
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  QR Code จะหมดอายุใน 30 นาที
+                </p>
+                <div className="flex items-center gap-2 justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                  <span className="text-sm">รอการชำระเงิน...</span>
+                </div>
+              </div>
+            ) : paymentData.authorizeUri ? (
+              <div className="text-center space-y-4">
+                <p className="text-sm text-muted-foreground">กดปุ่มด้านล่างเพื่อกรอกข้อมูลบัตรเครดิต</p>
+                <Button
+                  variant="gold"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => window.open(paymentData.authorizeUri, "_blank")}
+                >
+                  กรอกข้อมูลบัตรเครดิต
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-400" />
+                <p className="text-sm text-muted-foreground">กำลังเตรียมการชำระเงิน...</p>
+              </div>
+            )}
+
+            <Separator />
+
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-2">ออเดอร์ #{orderId.slice(0, 8)}</p>
+              <p className="text-lg font-bold text-gold">{formatPrice(totalAmount)}</p>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setPaymentStep(false)
+                setPaymentData(null)
+              }}
+            >
+              ยกเลิกและกลับไปแก้ไข
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -276,7 +357,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                       กำลังดำเนินการ...
                     </>
                   ) : (
-                    `ชำระเงิน ${formatPrice(total)}`
+                    `ดำเนินการชำระเงิน ${formatPrice(total)}`
                   )}
                 </Button>
               </CardContent>

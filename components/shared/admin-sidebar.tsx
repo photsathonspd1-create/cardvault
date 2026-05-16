@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   FileText,
+  ShieldCheck,
 } from "lucide-react"
 
 const NAV_ITEMS = [
@@ -32,6 +33,11 @@ const NAV_ITEMS = [
     title: "ผู้ใช้",
     href: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "ตรวจสอบ KYC",
+    href: "/admin/kyc",
+    icon: ShieldCheck,
   },
   {
     title: "บันทึกกิจกรรม",

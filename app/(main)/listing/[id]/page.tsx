@@ -17,7 +17,9 @@ import {
   Eye,
   Clock,
   Package,
+  TrendingUp,
 } from "lucide-react"
+import { PriceChart } from "@/components/shared/price-chart"
 import type { Metadata } from "next"
 
 export const dynamic = "force-dynamic"
@@ -295,6 +297,14 @@ export default async function ListingPage({ params }: ListingPageProps) {
             </CardContent>
           </Card>
 
+          {/* Price History Chart */}
+          {listing.card && (
+            <PriceHistorySection cardId={listing.card.id} />
+          )}
+
+          {/* Similar Listings */}
+          <SimilarListingsCard listingId={listing.id} series={listing.series} />
+
           {/* Meta */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -321,5 +331,70 @@ export default async function ListingPage({ params }: ListingPageProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+// Price History section (server component to fetch data)
+async function PriceHistorySection({ cardId }: { cardId: string }) {
+  const history = await prisma.priceHistory.findMany({
+    where: { cardId },
+    orderBy: { recordedAt: "asc" },
+    take: 100,
+  })
+
+  if (history.length === 0) return null
+
+  const data = history.map((h) => ({
+    date: h.recordedAt.toISOString().split("T")[0],
+    price: h.price / 100, // Convert satang to baht for display
+  }))
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <h3 className="font-semibold mb-3 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-purple-400" />
+          ประวัติราคา ({history.length} รายการ)
+        </h3>
+        <PriceChart data={data} />
+      </CardContent>
+    </Card>
+  )
+}
+
+// Similar Listings component
+async function SimilarListingsCard({ listingId, series }: { listingId: string; series: string }) {
+  const similar = await prisma.listing.findMany({
+    where: { id: { not: listingId }, status: "ACTIVE", series: series as any },
+    take: 4,
+    orderBy: { createdAt: "desc" },
+    include: { images: { take: 1 }, seller: { select: { displayName: true, tier: true } } },
+  })
+
+  if (similar.length === 0) return null
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <h3 className="font-semibold mb-3">สินค้าที่คล้ายกัน</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {similar.map((item) => (
+            <Link key={item.id} href={`/listing/${item.id}`} className="group">
+              <div className="relative aspect-[3/4] bg-muted rounded-md overflow-hidden mb-2">
+                <Image
+                  src={item.images[0]?.url ?? "/placeholder-card.png"}
+                  alt={item.customName ?? "Card"}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform"
+                  sizes="50vw"
+                />
+              </div>
+              <p className="text-xs font-medium truncate">{item.customName}</p>
+              <p className="text-xs text-gold font-bold">{formatPrice(item.price)}</p>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

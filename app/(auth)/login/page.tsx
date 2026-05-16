@@ -132,6 +132,7 @@ function LoginContent() {
                 className="pl-10"
                 required
                 disabled={loading || lineLoading}
+                autoComplete="email"
               />
             </div>
           </div>
@@ -157,6 +158,7 @@ function LoginContent() {
                 className="pl-10"
                 required
                 disabled={loading || lineLoading}
+                autoComplete="current-password"
               />
             </div>
           </div>

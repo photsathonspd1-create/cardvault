@@ -8,6 +8,71 @@
 
 import { supabaseAdmin } from "./supabase-client"
 
+// ─── Relation name mapping (Prisma → PostgREST table names) ───────
+const RELATION_MAP: Record<string, string> = {
+  // Listing
+  images: "ListingImage",
+  seller: "SellerProfile",
+  card: "CardCatalog",
+  shippingOptions: "ShippingOption",
+  orders: "Order",
+  reports: "Report",
+  watchlists: "Watchlist",
+  priceAlerts: "PriceAlert",
+  // SellerProfile
+  user: "User",
+  bankAccount: "BankAccount",
+  subscription: "SellerSubscription",
+  listings: "Listing",
+  // User
+  sellerProfile: "SellerProfile",
+  buyerOrders: "Order",
+  sellerOrders: "Order",
+  accounts: "Account",
+  sessions: "Session",
+  reviewsGiven: "Review",
+  reviewsReceived: "Review",
+  watchlist: "Watchlist",
+  notifications: "Notification",
+  disputes: "Dispute",
+  priceAlerts: "PriceAlert",
+  communityPosts: "CommunityPost",
+  postComments: "PostComment",
+  postLikes: "PostLike",
+  forumThreads: "ForumThread",
+  forumReplies: "ForumReply",
+  scammerReports: "ScammerReport",
+  reports: "Report",
+  // Order
+  listing: "Listing",
+  buyer: "User",
+  seller: "User",
+  dispute: "Dispute",
+  review: "Review",
+  statusHistory: "OrderStatusHistory",
+  // CardCatalog
+  priceHistory: "PriceHistory",
+  // CommunityPost
+  author: "User",
+  comments: "PostComment",
+  likes: "PostLike",
+  // PostComment
+  post: "CommunityPost",
+  parent: "PostComment",
+  replies: "PostComment",
+  // Dispute
+  order: "Order",
+  raisedBy: "User",
+  evidence: "DisputeEvidence",
+  // Review
+  order: "Order",
+  reviewer: "User",
+  reviewee: "User",
+  // Report
+  listing: "Listing",
+  reporter: "User",
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
 
 /** Convert a Prisma `where` clause into an array of PostgREST filter objects. */
@@ -218,22 +283,27 @@ function buildSelectString(
   include: Record<string, unknown> | undefined,
   select: Record<string, unknown> | undefined,
   _model: string
-): string {
+): { selectStr: string; extraParams: Record<string, string> } {
+  const extraParams: Record<string, string> = {}
+
   if (select && !include) {
     // Explicit select
     const cols = Object.entries(select)
       .filter(([, v]) => v === true)
       .map(([k]) => k)
-    return cols.join(",")
+    return { selectStr: cols.join(","), extraParams }
   }
 
-  if (!include) return "*"
+  if (!include) return { selectStr: "*", extraParams }
 
   const parts: string[] = ["*"]
 
   for (const [relation, spec] of Object.entries(include)) {
+    // Map Prisma relation name → PostgREST table name
+    const tableName = RELATION_MAP[relation] ?? relation
+
     if (spec === true || spec === false) {
-      if (spec === true) parts.push(`${relation}(*)`)
+      if (spec === true) parts.push(`${tableName}(*)`)
       continue
     }
 
@@ -262,8 +332,9 @@ function buildSelectString(
         }
         if (nestedInclude) {
           for (const [k, v] of Object.entries(nestedInclude)) {
+            const innerTableName = RELATION_MAP[k] ?? k
             if (v === true) {
-              innerParts.push(`${k}(*)`)
+              innerParts.push(`${innerTableName}(*)`)
             } else if (typeof v === "object") {
               // One more level deep
               const deepSelect = (v as Record<string, unknown>).select as
@@ -273,38 +344,36 @@ function buildSelectString(
                 const deepCols = Object.entries(deepSelect)
                   .filter(([, dv]) => dv === true)
                   .map(([dk]) => dk)
-                innerParts.push(`${k}(${deepCols.join(",")})`)
+                innerParts.push(`${innerTableName}(${deepCols.join(",")})`)
               } else {
-                innerParts.push(`${k}(*)`)
+                innerParts.push(`${innerTableName}(*)`)
               }
             }
           }
         }
 
-        // Apply limit and ordering via PostgREST
-        let suffix = ""
-        if (take !== undefined) suffix += `.limit(${take})`
+        // Collect limit/order as separate PostgREST query params
+        if (take !== undefined) extraParams[`${tableName}.limit`] = String(take)
         if (orderBy) {
           const [field, dir] = Object.entries(orderBy)[0]
-          suffix += `.order(${field},${dir})`
+          extraParams[`${tableName}.order`] = `${field}.${dir}`
         }
 
         const inner = innerParts.length > 0 ? innerParts.join(",") : "*"
-        parts.push(`${relation}(${inner}${suffix})`)
+        parts.push(`${tableName}(${inner})`)
       } else {
         // Simple include with take
-        let suffix = ""
-        if (take !== undefined) suffix += `.limit(${take})`
+        if (take !== undefined) extraParams[`${tableName}.limit`] = String(take)
         if (orderBy) {
           const [field, dir] = Object.entries(orderBy)[0]
-          suffix += `.order(${field},${dir})`
+          extraParams[`${tableName}.order`] = `${field}.${dir}`
         }
-        parts.push(`${relation}(*${suffix})`)
+        parts.push(`${tableName}(*)`)
       }
     }
   }
 
-  return parts.join(",")
+  return { selectStr: parts.join(","), extraParams }
 }
 
 /** Apply ordering to query. */
@@ -410,8 +479,13 @@ function createModelProxy(modelName: string) {
         distinct?: unknown
       }
 
-      const selStr = buildSelectString(include, select, table)
-      let query = supabaseAdmin.from(table).select(selStr, { count: "exact" })
+      const { selectStr, extraParams } = buildSelectString(include, select, table)
+      let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
+
+      // Apply extra PostgREST params (limit/order on embedded relations)
+      for (const [key, val] of Object.entries(extraParams)) {
+        query.url.searchParams.set(key, val)
+      }
 
       // Apply filters
       if (where) {
@@ -450,8 +524,13 @@ function createModelProxy(modelName: string) {
         select?: Record<string, unknown>
       }
 
-      const selStr = buildSelectString(include, select, table)
-      let query = supabaseAdmin.from(table).select(selStr)
+      const { selectStr, extraParams } = buildSelectString(include, select, table)
+      let query = supabaseAdmin.from(table).select(selectStr)
+
+      // Apply extra PostgREST params
+      for (const [key, val] of Object.entries(extraParams)) {
+        query.url.searchParams.set(key, val)
+      }
 
       // Apply unique filters
       query = applyWhereClause(query, where)
@@ -598,8 +677,8 @@ function createModelProxy(modelName: string) {
       let query = supabaseAdmin.from(table).update(updateData)
       query = applyWhereClause(query, where)
 
-      const selStr = buildSelectString(include, select, table)
-      query = query.select(selStr).maybeSingle()
+      const { selectStr } = buildSelectString(include, select, table)
+      query = query.select(selectStr).maybeSingle()
 
       const { data, error } = await query
       if (error) {

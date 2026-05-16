@@ -26,28 +26,24 @@ const SERIES_CARDS = [
     name: "Pokemon",
     image: "https://images.pokemontcg.io/swsh12/1_hires.png",
     color: "from-yellow-500 to-red-500",
-    count: "2,500+",
   },
   {
     series: "YUGIOH",
     name: "Yu-Gi-Oh!",
     image: "https://images.pokemontcg.io/xy12/1_hires.png",
     color: "from-purple-600 to-blue-600",
-    count: "1,800+",
   },
   {
     series: "MTG",
     name: "Magic: The Gathering",
     image: "https://images.pokemontcg.io/sm12/1_hires.png",
     color: "from-orange-500 to-amber-500",
-    count: "3,200+",
   },
   {
     series: "ONE_PIECE",
     name: "One Piece",
     image: "https://images.pokemontcg.io/swsh11/1_hires.png",
     color: "from-red-500 to-blue-500",
-    count: "900+",
   },
 ]
 
@@ -81,6 +77,14 @@ export default async function HomePage() {
   const totalListings = await prisma.listing.count({ where: { status: "ACTIVE" } })
   const totalUsers = await prisma.user.count()
   const totalOrders = await prisma.order.count({ where: { status: "COMPLETED" } })
+
+  // Series counts
+  const seriesCounts: Record<string, number> = {}
+  for (const s of SERIES_CARDS) {
+    seriesCounts[s.series] = await prisma.listing.count({
+      where: { status: "ACTIVE", series: s.series },
+    })
+  }
 
   return (
     <div>
@@ -163,7 +167,7 @@ export default async function HomePage() {
                 <div className={`h-32 bg-gradient-to-br ${s.color} relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                   <div className="absolute bottom-2 left-3">
-                    <span className="text-xs text-white/80">{s.count} รายการ</span>
+                    <span className="text-xs text-white/80">{seriesCounts[s.series] ?? 0} รายการ</span>
                   </div>
                 </div>
                 <CardContent className="p-4">

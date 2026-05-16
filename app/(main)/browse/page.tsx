@@ -102,7 +102,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         // Fallback to LIKE search if FTS returns no results
         where.OR = [
           { customName: { contains: q, mode: "insensitive" } },
-          { card: { name: { contains: q, mode: "insensitive" } } },
           { description: { contains: q, mode: "insensitive" } },
         ]
       }
@@ -110,7 +109,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       // search_vector column may not exist yet — fall back to LIKE
       where.OR = [
         { customName: { contains: q, mode: "insensitive" } },
-        { card: { name: { contains: q, mode: "insensitive" } } },
         { description: { contains: q, mode: "insensitive" } },
       ]
     }

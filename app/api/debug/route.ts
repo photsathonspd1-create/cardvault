@@ -27,7 +27,19 @@ export async function GET() {
     // Test 4: prisma proxy findMany (what browse page uses)
     let prismaResult: unknown[] = []
     let prismaError: string | null = null
+    let proxySelectStr = ""
     try {
+      // Capture what the proxy builds
+      const origFetch = globalThis.fetch
+      let capturedUrl = ""
+      globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
+        const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
+        if (urlStr.includes("rest/v1/Listing")) {
+          capturedUrl = urlStr
+        }
+        return origFetch(input as string, init)
+      }
+
       prismaResult = await prisma.listing.findMany({
         where: { status: "ACTIVE" },
         include: {
@@ -37,6 +49,9 @@ export async function GET() {
         take: 2,
         orderBy: { createdAt: "desc" },
       })
+
+      globalThis.fetch = origFetch
+      proxySelectStr = capturedUrl
     } catch (err) {
       prismaError = String(err)
     }
@@ -83,6 +98,7 @@ export async function GET() {
         error: prismaError,
         hasSellerProfile: prismaResult[0] ? "SellerProfile" in (prismaResult[0] as Record<string, unknown>) : false,
         hasImages: prismaResult[0] ? "ListingImage" in (prismaResult[0] as Record<string, unknown>) : false,
+        capturedUrl: proxySelectStr,
       },
       test5_rawPostgREST: test5Result ?? test5Error,
     })

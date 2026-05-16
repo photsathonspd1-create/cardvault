@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -20,6 +20,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [lineLoading, setLineLoading] = useState(false)
+  const [lineEnabled, setLineEnabled] = useState(false)
+
+  // Check if LINE login is available by looking for the provider
+  useEffect(() => {
+    fetch("/api/auth/providers")
+      .then((res) => res.json())
+      .then((providers) => {
+        if (providers?.line) {
+          setLineEnabled(true)
+        }
+      })
+      .catch(() => {
+        // LINE not available
+      })
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,10 +55,20 @@ export default function LoginPage() {
         router.push(callbackUrl)
         router.refresh()
       }
-    } catch (err) {
+    } catch {
       setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleLineLogin() {
+    setLineLoading(true)
+    try {
+      await signIn("line", { callbackUrl })
+    } catch {
+      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย LINE")
+      setLineLoading(false)
     }
   }
 
@@ -55,6 +81,36 @@ export default function LoginPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* LINE Login Button */}
+        {lineEnabled && (
+          <>
+            <Button
+              variant="outline"
+              className="w-full border-0 text-white font-semibold"
+              size="lg"
+              style={{ backgroundColor: "#06C755" }}
+              onClick={handleLineLogin}
+              disabled={lineLoading || loading}
+            >
+              {lineLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                </svg>
+              )}
+              เข้าสู่ระบบด้วย LINE
+            </Button>
+
+            <div className="relative my-6">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                หรือ
+              </span>
+            </div>
+          </>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
@@ -75,7 +131,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-10"
                 required
-                disabled={loading}
+                disabled={loading || lineLoading}
               />
             </div>
           </div>
@@ -100,7 +156,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10"
                 required
-                disabled={loading}
+                disabled={loading || lineLoading}
               />
             </div>
           </div>
@@ -110,7 +166,7 @@ export default function LoginPage() {
             className="w-full"
             variant="purple"
             size="lg"
-            disabled={loading}
+            disabled={loading || lineLoading}
           >
             {loading ? (
               <>
@@ -123,27 +179,32 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="relative my-6">
-          <Separator />
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-            หรือ
-          </span>
-        </div>
+        {/* Show LINE hint when not configured */}
+        {!lineEnabled && (
+          <>
+            <div className="relative my-6">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                หรือ
+              </span>
+            </div>
 
-        <Button
-          variant="outline"
-          className="w-full"
-          size="lg"
-          disabled
-        >
-          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-            <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
-              fill="currentColor"
-            />
-          </svg>
-          เข้าสู่ระบบด้วย LINE (เร็วๆ นี้)
-        </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              size="lg"
+              disabled
+            >
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+                  fill="currentColor"
+                />
+              </svg>
+              เข้าสู่ระบบด้วย LINE (เร็วๆ นี้)
+            </Button>
+          </>
+        )}
       </CardContent>
       <CardFooter>
         <p className="text-sm text-center text-muted-foreground w-full">

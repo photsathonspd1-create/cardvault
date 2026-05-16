@@ -5,25 +5,47 @@ import { prisma } from "@/lib/prisma"
 import { formatPrice, SERIES_LABELS, CONDITION_LABELS, LANGUAGE_LABELS, getRelativeTime } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getInitials } from "@/lib/utils"
 import {
   Shield,
   Star,
   Truck,
-  MessageCircle,
   Heart,
   Share2,
   Eye,
   Clock,
   Package,
-  AlertTriangle,
 } from "lucide-react"
+import type { Metadata } from "next"
 
 interface ListingPageProps {
   params: { id: string }
+}
+
+export async function generateMetadata({ params }: ListingPageProps): Promise<Metadata> {
+  const listing = await prisma.listing.findUnique({
+    where: { id: params.id },
+    include: { card: true },
+  })
+
+  if (!listing) {
+    return { title: "ไม่พบรายการ" }
+  }
+
+  const name = listing.customName ?? listing.card?.name ?? "Untitled"
+  const price = formatPrice(listing.price)
+
+  return {
+    title: `${name} - ${price}`,
+    description: `${name} ราคา ${price} สภาพ ${CONDITION_LABELS[listing.condition] ?? listing.condition} ซื้อขายปลอดภัยด้วยระบบ Escrow | CardVault`,
+    openGraph: {
+      title: `${name} | CardVault`,
+      description: `ซื้อ ${name} ราคา ${price} บน CardVault`,
+      type: "website",
+    },
+  }
 }
 
 export default async function ListingPage({ params }: ListingPageProps) {
@@ -55,10 +77,10 @@ export default async function ListingPage({ params }: ListingPageProps) {
   const seller = listing.seller
 
   return (
-    <div className="container px-4 py-8">
-      <div className="grid lg:grid-cols-2 gap-8">
+    <div className="container px-4 py-4 sm:py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left: Image Gallery */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="relative aspect-[3/4] bg-muted rounded-lg overflow-hidden">
             <Image
               src={mainImage}
@@ -69,7 +91,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
               priority
             />
             {listing.isGraded && (
-              <Badge variant="gold" className="absolute top-4 left-4">
+              <Badge variant="gold" className="absolute top-3 left-3 sm:top-4 sm:left-4">
                 {listing.gradingCompany} {listing.gradeScore}
               </Badge>
             )}
@@ -98,10 +120,10 @@ export default async function ListingPage({ params }: ListingPageProps) {
         </div>
 
         {/* Right: Details */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Title & Price */}
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Badge variant="purple">{SERIES_LABELS[listing.series] ?? listing.series}</Badge>
               <Badge variant="secondary">{CONDITION_LABELS[listing.condition]}</Badge>
               {listing.language !== "THAI" && (
@@ -109,12 +131,12 @@ export default async function ListingPage({ params }: ListingPageProps) {
               )}
             </div>
 
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
               {listing.customName ?? listing.card?.name ?? "Untitled"}
             </h1>
 
             {listing.card && (
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 {listing.card.setName} • #{listing.card.cardNumber} • {listing.card.rarity}
               </p>
             )}
@@ -122,13 +144,13 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
           {/* Price */}
           <Card className="border-gold/20">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-gold">
+                <span className="text-2xl sm:text-3xl font-bold text-gold">
                   {formatPrice(listing.price)}
                 </span>
                 {listing.originalPrice && listing.originalPrice > listing.price && (
-                  <span className="text-lg text-muted-foreground line-through">
+                  <span className="text-base sm:text-lg text-muted-foreground line-through">
                     {formatPrice(listing.originalPrice)}
                   </span>
                 )}
@@ -144,10 +166,10 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     ซื้อเลย
                   </Link>
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="shrink-0">
                   <Heart className="h-5 w-5" />
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="shrink-0">
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
@@ -229,20 +251,20 @@ export default async function ListingPage({ params }: ListingPageProps) {
             <CardContent className="p-4">
               <h3 className="font-semibold mb-3">ผู้ขาย</h3>
               <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
+                <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
                   <AvatarImage src={seller.user.avatar ?? undefined} />
                   <AvatarFallback className="bg-purple-600/20 text-purple-400">
                     {getInitials(seller.user.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <Link
                     href={`/profile/${seller.user.username}`}
-                    className="font-medium hover:text-purple-400 transition-colors"
+                    className="font-medium hover:text-purple-400 transition-colors truncate block"
                   >
                     {seller.displayName}
                   </Link>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
                     {seller.rating > 0 && (
                       <span className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-gold text-gold" />
@@ -262,7 +284,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     </Badge>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="shrink-0">
                   <Link href={`/profile/${seller.user.username}`}>
                     ดูโปรไฟล์
                   </Link>
@@ -284,7 +306,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
           </div>
 
           {/* Escrow Notice */}
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-purple-600/10 border border-purple-600/20">
+          <div className="flex items-start gap-3 p-3 sm:p-4 rounded-lg bg-purple-600/10 border border-purple-600/20">
             <Shield className="h-5 w-5 text-purple-400 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium text-purple-400">ระบบ Escrow คุ้มครอง</p>

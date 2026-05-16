@@ -9,6 +9,8 @@ import {
   ShoppingBag,
   Package,
   BarChart3,
+  Shield,
+  Crown,
   Settings,
 } from "lucide-react"
 
@@ -32,6 +34,21 @@ const NAV_ITEMS = [
     title: "ออเดอร์",
     href: "/sell/orders",
     icon: Package,
+  },
+  {
+    title: "วิเคราะห์",
+    href: "/sell/analytics",
+    icon: BarChart3,
+  },
+  {
+    title: "ยืนยันตัวตน",
+    href: "/sell/kyc",
+    icon: Shield,
+  },
+  {
+    title: "แผนสมาชิก",
+    href: "/sell/subscription",
+    icon: Crown,
   },
 ]
 

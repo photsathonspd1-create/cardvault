@@ -14,8 +14,20 @@ import {
 } from "@/components/ui/select"
 import Image from "next/image"
 import Link from "next/link"
-import { Search, SlidersHorizontal, Star, Eye } from "lucide-react"
+import { Search, Star, Eye } from "lucide-react"
 import { CardSeries, Condition, ListingStatus } from "@prisma/client"
+import { BrowseFilters } from "@/components/browse-filters"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "ค้นหาการ์ด TCG",
+  description:
+    "ค้นหาและซื้อขายการ์ด TCG ทุกซีรีส์ Pokemon, Yu-Gi-Oh!, MTG, One Piece ราคาดี คุณภาพเยี่ยม พร้อมระบบ Escrow คุ้มครองทุกคำสั่งซื้อ",
+  openGraph: {
+    title: "ค้นหาการ์ด TCG | CardVault",
+    description: "ตลาดซื้อขายการ์ด TCG ที่ใหญ่ที่สุดในประเทศไทย",
+  },
+}
 
 interface BrowsePageProps {
   searchParams: {
@@ -47,7 +59,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const currentPage = Math.max(1, parseInt(page))
 
   // Build where clause
-  const where: any = {
+  const where: Record<string, unknown> = {
     status: ListingStatus.ACTIVE,
   }
 
@@ -60,11 +72,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   }
 
   if (minPrice) {
-    where.price = { ...where.price, gte: parseInt(minPrice) * 100 }
+    where.price = { ...((where.price as Record<string, number>) ?? {}), gte: parseInt(minPrice) * 100 }
   }
 
   if (maxPrice) {
-    where.price = { ...where.price, lte: parseInt(maxPrice) * 100 }
+    where.price = { ...((where.price as Record<string, number>) ?? {}), lte: parseInt(maxPrice) * 100 }
   }
 
   if (graded === "true") {
@@ -72,15 +84,37 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   }
 
   if (q) {
-    where.OR = [
-      { customName: { contains: q, mode: "insensitive" } },
-      { card: { name: { contains: q, mode: "insensitive" } } },
-      { description: { contains: q, mode: "insensitive" } },
-    ]
+    // Try full-text search with Thai dictionary first
+    try {
+      const ftsResults = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Listing"
+        WHERE search_vector @@ plainto_tsquery('thai', ${q})
+          AND status = 'ACTIVE'
+        ORDER BY ts_rank(search_vector, plainto_tsquery('thai', ${q})) DESC
+        LIMIT 200
+      `
+      if (ftsResults.length > 0) {
+        where.id = { in: ftsResults.map((r) => r.id) }
+      } else {
+        // Fallback to LIKE search if FTS returns no results
+        where.OR = [
+          { customName: { contains: q, mode: "insensitive" } },
+          { card: { name: { contains: q, mode: "insensitive" } } },
+          { description: { contains: q, mode: "insensitive" } },
+        ]
+      }
+    } catch {
+      // search_vector column may not exist yet — fall back to LIKE
+      where.OR = [
+        { customName: { contains: q, mode: "insensitive" } },
+        { card: { name: { contains: q, mode: "insensitive" } } },
+        { description: { contains: q, mode: "insensitive" } },
+      ]
+    }
   }
 
   // Build orderBy
-  let orderBy: any = { createdAt: "desc" }
+  let orderBy: Record<string, string> = { createdAt: "desc" }
   switch (sort) {
     case "price_asc":
       orderBy = { price: "asc" }
@@ -116,11 +150,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
 
+  const baseSearchParams = Object.fromEntries(
+    Object.entries(searchParams).filter(([_, v]) => v)
+  )
+
   return (
     <div className="container px-4 py-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">
           {series && series !== "ALL"
             ? `ค้นหา ${SERIES_LABELS[series] ?? series}`
             : q
@@ -132,8 +170,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         </p>
       </div>
 
-      {/* Search & Filters */}
-      <div className="mb-8 space-y-4">
+      {/* Search Bar */}
+      <div className="mb-6">
         <form className="flex gap-2" action="/browse" method="GET">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -149,50 +187,14 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             ค้นหา
           </Button>
         </form>
-
-        <div className="flex flex-wrap gap-2">
-          <Select name="series" defaultValue={series ?? "ALL"}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="ซีรีส์" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">ทุกซีรีส์</SelectItem>
-              {Object.entries(SERIES_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select name="condition" defaultValue={condition ?? "ALL"}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="สภาพ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">ทุกสภาพ</SelectItem>
-              {Object.entries(CONDITION_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select name="sort" defaultValue={sort}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="เรียงตาม" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">ใหม่ล่าสุด</SelectItem>
-              <SelectItem value="oldest">เก่าสุด</SelectItem>
-              <SelectItem value="price_asc">ราคาต่ำ → สูง</SelectItem>
-              <SelectItem value="price_desc">ราคาสูง → ต่ำ</SelectItem>
-              <SelectItem value="popular">ยอดนิยม</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
+
+      {/* Mobile: Collapsible Filters / Desktop: Always Visible */}
+      <BrowseFilters
+        series={series}
+        condition={condition}
+        sort={sort}
+      />
 
       {/* Results */}
       {listings.length === 0 ? (
@@ -204,7 +206,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
             {listings.map((listing) => (
               <ListingCard key={listing.id} listing={listing} />
             ))}
@@ -212,14 +214,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-8">
+            <div className="flex justify-center gap-2 mt-8 flex-wrap">
               {currentPage > 1 && (
                 <Button variant="outline" size="sm" asChild>
                   <Link
                     href={`/browse?${new URLSearchParams({
-                      ...Object.fromEntries(
-                        Object.entries(searchParams).filter(([_, v]) => v)
-                      ),
+                      ...baseSearchParams,
                       page: String(currentPage - 1),
                     }).toString()}`}
                   >
@@ -237,12 +237,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     variant={pageNum === currentPage ? "purple" : "outline"}
                     size="sm"
                     asChild
+                    className="hidden sm:inline-flex"
                   >
                     <Link
                       href={`/browse?${new URLSearchParams({
-                        ...Object.fromEntries(
-                          Object.entries(searchParams).filter(([_, v]) => v)
-                        ),
+                        ...baseSearchParams,
                         page: String(pageNum),
                       }).toString()}`}
                     >
@@ -252,13 +251,16 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 )
               })}
 
+              {/* Mobile: just show current page indicator */}
+              <span className="sm:hidden text-sm text-muted-foreground px-3 py-2">
+                หน้า {currentPage} / {totalPages}
+              </span>
+
               {currentPage < totalPages && (
                 <Button variant="outline" size="sm" asChild>
                   <Link
                     href={`/browse?${new URLSearchParams({
-                      ...Object.fromEntries(
-                        Object.entries(searchParams).filter(([_, v]) => v)
-                      ),
+                      ...baseSearchParams,
                       page: String(currentPage + 1),
                     }).toString()}`}
                   >
@@ -274,53 +276,53 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   )
 }
 
-function ListingCard({ listing }: { listing: any }) {
-  const imageUrl = listing.images?.[0]?.url ?? "/placeholder-card.png"
+function ListingCard({ listing }: { listing: Record<string, unknown> }) {
+  const imageUrl = (listing as any).images?.[0]?.url ?? "/placeholder-card.png"
 
   return (
-    <Link href={`/listing/${listing.id}`}>
+    <Link href={`/listing/${(listing as any).id}`}>
       <Card className="group overflow-hidden hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 h-full">
         <div className="relative aspect-[3/4] bg-muted overflow-hidden">
           <Image
             src={imageUrl}
-            alt={listing.customName ?? listing.card?.name ?? "Card"}
+            alt={(listing as any).customName ?? (listing as any).card?.name ?? "Card"}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
+            sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 20vw"
           />
-          {listing.isGraded && (
+          {(listing as any).isGraded && (
             <Badge variant="gold" className="absolute top-2 left-2 text-[10px]">
-              {listing.gradingCompany} {listing.gradeScore}
+              {(listing as any).gradingCompany} {(listing as any).gradeScore}
             </Badge>
           )}
-          {listing.isFeatured && (
+          {(listing as any).isFeatured && (
             <Badge variant="purple" className="absolute top-2 right-2 text-[10px]">
               ⭐ แนะนำ
             </Badge>
           )}
           <div className="absolute bottom-2 right-2 flex items-center gap-1 text-xs text-white/80 bg-black/50 rounded px-1.5 py-0.5">
             <Eye className="h-3 w-3" />
-            {listing.views}
+            {(listing as any).views}
           </div>
         </div>
-        <CardContent className="p-3 space-y-1">
-          <p className="text-xs text-muted-foreground truncate">
-            {SERIES_LABELS[listing.series] ?? listing.series}
-            {listing.language !== "THAI" && ` • ${LANGUAGE_LABELS[listing.language] ?? listing.language}`}
+        <CardContent className="p-2 sm:p-3 space-y-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+            {SERIES_LABELS[(listing as any).series] ?? (listing as any).series}
+            {(listing as any).language !== "THAI" && ` • ${LANGUAGE_LABELS[(listing as any).language] ?? (listing as any).language}`}
           </p>
-          <h3 className="font-medium text-sm truncate group-hover:text-purple-400 transition-colors">
-            {listing.customName ?? listing.card?.name ?? "Untitled"}
+          <h3 className="font-medium text-xs sm:text-sm truncate group-hover:text-purple-400 transition-colors">
+            {(listing as any).customName ?? (listing as any).card?.name ?? "Untitled"}
           </h3>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-lg font-bold text-gold">
-              {formatPrice(listing.price)}
+            <span className="text-sm sm:text-lg font-bold text-gold">
+              {formatPrice((listing as any).price)}
             </span>
-            <span className="text-xs text-muted-foreground">
-              {CONDITION_LABELS[listing.condition] ?? listing.condition}
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              {CONDITION_LABELS[(listing as any).condition] ?? (listing as any).condition}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            โดย {listing.seller.user.name}
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
+            โดย {(listing as any).seller.user.name}
           </p>
         </CardContent>
       </Card>

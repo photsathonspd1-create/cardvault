@@ -8,9 +8,29 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, ShoppingBag, Star, ExternalLink } from "lucide-react"
+import type { Metadata } from "next"
 
 interface CardPageProps {
   params: { catalogId: string }
+}
+
+export async function generateMetadata({ params }: CardPageProps): Promise<Metadata> {
+  const card = await prisma.cardCatalog.findUnique({
+    where: { id: params.catalogId },
+    select: { name: true, nameTh: true, setName: true, series: true, rarity: true },
+  })
+
+  if (!card) return { title: "ไม่พบการ์ด" }
+
+  const seriesLabel = SERIES_LABELS[card.series] ?? card.series
+  const title = `${card.name} — ${card.setName} | ${seriesLabel}`
+  const description = `ราคาตลาด ${card.name} ${card.rarity} จากชุด ${card.setName} — ดูราคาและรายการขายบน CardVault`
+
+  return {
+    title,
+    description,
+    openGraph: { title, description },
+  }
 }
 
 export default async function CardCatalogPage({ params }: CardPageProps) {

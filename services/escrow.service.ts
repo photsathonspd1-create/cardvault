@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { EscrowStatus, OrderStatus } from "@prisma/client"
+import { checkAndUpgradeTier } from "@/services/tier.service"
 
 /**
  * Escrow System
@@ -90,6 +91,15 @@ export async function releaseEscrow(orderId: string, releasedBy: "buyer" | "syst
       })
     }
   })
+
+  // Check tier auto-upgrade after successful sale
+  if (order.seller.sellerProfile) {
+    try {
+      await checkAndUpgradeTier(order.seller.sellerProfile.id)
+    } catch {
+      // Don't fail escrow release if tier check fails
+    }
+  }
 }
 
 /**

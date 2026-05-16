@@ -95,3 +95,59 @@
     scrollbar-width: none;
   }
 }
+
+/* Mobile-specific utilities */
+@layer utilities {
+  /* Safe area padding for mobile devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Touch-friendly tap targets on mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile bottom nav fixed position */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: hsl(var(--background));
+    border-top: 1px solid hsl(var(--border));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Prevent horizontal scroll on mobile */
+  .no-x-overflow {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Mobile-optimized text sizes */
+  .text-mobile-lg {
+    font-size: clamp(1.125rem, 4vw, 1.5rem);
+  }
+
+  /* Responsive container with better mobile padding */
+  .container-mobile {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-mobile {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+}

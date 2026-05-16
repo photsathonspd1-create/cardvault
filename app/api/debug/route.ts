@@ -11,7 +11,7 @@ export async function GET() {
       .eq("status", "ACTIVE")
       .limit(2)
 
-    // Test 2: with embedded resources
+    // Test 2: with embedded resources via Supabase JS client
     const { data: withInclude, error: e2 } = await supabaseAdmin
       .from("Listing")
       .select("*,ListingImage(*),SellerProfile(*,User(name,username))")
@@ -27,13 +27,7 @@ export async function GET() {
     // Test 4: prisma proxy findMany (what browse page uses)
     let prismaResult: unknown[] = []
     let prismaError: string | null = null
-    let prismaMethod = "unknown"
     try {
-      // Patch: temporarily capture console.error to detect which method was used
-      const origError = console.error
-      const errors: string[] = []
-      console.error = (...args: unknown[]) => { errors.push(args.map(String).join(" ' ')); origError(...args) }
-      
       prismaResult = await prisma.listing.findMany({
         where: { status: "ACTIVE" },
         include: {
@@ -43,23 +37,13 @@ export async function GET() {
         take: 2,
         orderBy: { createdAt: "desc" },
       })
-      
-      console.error = origError
-      
-      if (errors.some(e => e.includes("PostgREST"))) {
-        prismaMethod = "postgrest-fallback-supabase-js"
-      } else if (errors.some(e => e.includes("fetchIncludes"))) {
-        prismaMethod = "supabase-js-fetchIncludes"
-      } else {
-        prismaMethod = "postgrest-raw"
-      }
     } catch (err) {
       prismaError = String(err)
     }
 
-    // Test 6: raw fetch direct test
-    let test6Result: unknown = null
-    let test6Error: string | null = null
+    // Test 5: raw PostgREST fetch (bypasses Supabase JS client)
+    let test5Result: unknown = null
+    let test5Error: string | null = null
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
       const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
@@ -72,49 +56,35 @@ export async function GET() {
         },
       })
       if (!res.ok) {
-        test6Error = `HTTP ${res.status}: ${await res.text()}`
+        test5Error = `HTTP ${res.status}: ${await res.text()}`
       } else {
         const data = await res.json()
-        test6Result = {
+        test5Result = {
           count: data.length,
           hasSellerProfile: data[0] ? "SellerProfile" in data[0] : false,
           sellerProfile: data[0]?.SellerProfile,
+          keys: data[0] ? Object.keys(data[0]) : [],
         }
       }
     } catch (err) {
-      test6Error = String(err)
-    }
-
-    // Test 5: check what select string the proxy builds
-    let selectStringInfo = ""
-    try {
-      // Manually test the embedded select that the proxy should build
-      const testSelect = "*,ListingImage(*),SellerProfile(*,User(name,username))"
-      const { data: test5Data, error: test5Err } = await supabaseAdmin
-        .from("Listing")
-        .select(testSelect)
-        .eq("status", "ACTIVE")
-        .limit(1)
-      selectStringInfo = JSON.stringify({
-        select: testSelect,
-        error: test5Err?.message,
-        count: test5Data?.length,
-        hasSellerProfile: test5Data?.[0] ? "SellerProfile" in test5Data[0] : false,
-        sellerProfileValue: test5Data?.[0]?.SellerProfile,
-        keys: test5Data?.[0] ? Object.keys(test5Data[0]) : [],
-      })
-    } catch (err) {
-      selectStringInfo = String(err)
+      test5Error = String(err)
     }
 
     return NextResponse.json({
       test1_simple: { count: simple?.length ?? 0, error: e1?.message },
-      test2_include: { count: withInclude?.length ?? 0, error: e2?.message, sample: withInclude?.[0]?.customName },
+      test2_supabaseJs: {
+        count: withInclude?.length ?? 0,
+        error: e2?.message,
+        hasSellerProfile: withInclude?.[0] ? "SellerProfile" in (withInclude[0] as Record<string, unknown>) : false,
+      },
       test3_count: { count, error: e3?.message },
-      test4_prisma: { count: prismaResult.length, error: prismaError, sample: prismaResult[0] },
-      test5_selectString: selectStringInfo,
-      test6_rawFetch: test6Result ?? test6Error,
-      prismaMethod: prismaMethod,
+      test4_prismaProxy: {
+        count: prismaResult.length,
+        error: prismaError,
+        hasSellerProfile: prismaResult[0] ? "SellerProfile" in (prismaResult[0] as Record<string, unknown>) : false,
+        hasImages: prismaResult[0] ? "ListingImage" in (prismaResult[0] as Record<string, unknown>) : false,
+      },
+      test5_rawPostgREST: test5Result ?? test5Error,
     })
   } catch (err: unknown) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

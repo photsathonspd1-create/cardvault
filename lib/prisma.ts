@@ -362,17 +362,26 @@ async function fetchIncludes(
     const tableName = RELATION_MAP[relation] ?? relation
     if (typeof spec !== "object" || spec === null || spec === true || spec === false) {
       if (spec === true) {
-        // Fetch all related records
-        const fkColumn = guessForeignKey(parentTable, tableName)
-        const parentIds = rows.map((r) => r.id).filter(Boolean)
-        if (parentIds.length === 0 || !fkColumn) continue
-        const { data } = await supabaseAdmin
-          .from(tableName)
-          .select("*")
-          .in(fkColumn, parentIds)
-        if (data) {
-          for (const row of result) {
-            row[tableName] = data.filter((d: Record<string, unknown>) => d[fkColumn] === row.id)
+        const fk = guessForeignKey(parentTable, tableName)
+        const isSingle = isOneToOne(parentTable, tableName)
+        if (isSingle && fk.parentFk) {
+          const childIds = rows.map((r) => r[fk.parentFk!]).filter(Boolean)
+          if (childIds.length > 0) {
+            const { data } = await supabaseAdmin.from(tableName).select("*").in("id", childIds)
+            if (data) {
+              const lookup = new Map(data.map((d: Record<string, unknown>) => [d.id, d]))
+              for (const row of result) { row[tableName] = lookup.get(row[fk.parentFk!]) ?? null }
+            }
+          }
+        } else if (!isSingle && fk.fkColumn) {
+          const parentIds = rows.map((r) => r.id).filter(Boolean)
+          if (parentIds.length > 0) {
+            const { data } = await supabaseAdmin.from(tableName).select("*").in(fk.fkColumn, parentIds)
+            if (data) {
+              for (const row of result) {
+                row[tableName] = data.filter((d: Record<string, unknown>) => d[fk.fkColumn!] === row.id)
+              }
+            }
           }
         }
       }
@@ -410,52 +419,72 @@ async function fetchIncludes(
       innerSelect = parts.join(",")
     }
 
-    const fkColumn = guessForeignKey(parentTable, tableName)
-    const parentIds = rows.map((r) => r.id).filter(Boolean)
-    if (parentIds.length === 0 || !fkColumn) continue
+    const fk = guessForeignKey(parentTable, tableName)
+    const isSingle = isOneToOne(parentTable, tableName)
 
-    let query = supabaseAdmin
-      .from(tableName)
-      .select(innerSelect)
-      .in(fkColumn, parentIds)
-
-    if (orderBy) {
-      const [field, dir] = Object.entries(orderBy)[0]
-      query = query.order(field, { ascending: dir === "asc" })
-    }
-
-    const { data } = await query
-    if (data) {
-      for (const row of result) {
-        let related = data.filter((d: Record<string, unknown>) => d[fkColumn] === row.id)
-        if (take !== undefined) related = related.slice(0, take)
-        // Trim nested includes
-        if (nestedInclude && related.length > 0) {
-          // Nested trimming is handled by the recursive call pattern
+    if (isSingle && fk.parentFk) {
+      // One-to-one: FK is on parent table (e.g., Listing.sellerId → SellerProfile.id)
+      const childIds = rows.map((r) => r[fk.parentFk!]).filter(Boolean)
+      if (childIds.length === 0) continue
+      const { data } = await supabaseAdmin.from(tableName).select(innerSelect).in("id", childIds)
+      if (data) {
+        const lookup = new Map(data.map((d: Record<string, unknown>) => [d.id, d]))
+        for (const row of result) {
+          row[tableName] = lookup.get(row[fk.parentFk!]) ?? null
         }
-        row[tableName] = isOneToOne(parentTable, tableName)
-          ? (related[0] ?? null)
-          : related
       }
+    } else if (!isSingle && fk.fkColumn) {
+      // One-to-many: FK is on child table (e.g., ListingImage.listingId → Listing.id)
+      const parentIds = rows.map((r) => r.id).filter(Boolean)
+      if (parentIds.length === 0) continue
+      let query = supabaseAdmin.from(tableName).select(innerSelect).in(fk.fkColumn, parentIds)
+      if (orderBy) {
+        const [field, dir] = Object.entries(orderBy)[0]
+        query = query.order(field, { ascending: dir === "asc" })
+      }
+      const { data } = await query
+      if (data) {
+        for (const row of result) {
+          let related = data.filter((d: Record<string, unknown>) => d[fk.fkColumn!] === row.id)
+          if (take !== undefined) related = related.slice(0, take)
+          row[tableName] = related
+        }
+      }
+    } else {
+      // Fallback: try both patterns
+      console.warn(`[supabase-db] No FK mapping for ${parentTable} → ${tableName}`)
     }
   }
 
   return result
 }
 
-/** Guess foreign key column name for a relation. */
-function guessForeignKey(parentTable: string, childTable: string): string | null {
-  // Common patterns
-  const fkMap: Record<string, Record<string, string>> = {
-    Listing: { ListingImage: "listingId", SellerProfile: "sellerId", CardCatalog: "cardId", ShippingOption: "listingId", Order: "listingId" },
-    SellerProfile: { Listing: "sellerId", User: "userId", BankAccount: "sellerId", SellerSubscription: "sellerId" },
-    User: { SellerProfile: "userId", Order: "buyerId", Session: "userId", Account: "userId", Notification: "userId", Review: "reviewerId", CommunityPost: "authorId" },
+/** Guess foreign key column and direction for a relation.
+ *  Returns { fkColumn, parentFk } where:
+ *  - fkColumn: column in the child table that holds the parent's id (for one-to-many)
+ *  - parentFk: column in the parent table that holds the child's id (for one-to-one with FK on parent)
+ */
+function guessForeignKey(parentTable: string, childTable: string): { fkColumn: string | null; parentFk: string | null } {
+  // fkColumn: column in CHILD table referencing parent.id
+  const fkChild: Record<string, Record<string, string>> = {
+    Listing: { ListingImage: "listingId", ShippingOption: "listingId", Order: "listingId" },
+    SellerProfile: { Listing: "sellerId" },
+    User: { SellerProfile: "userId", Session: "userId", Account: "userId", Notification: "userId", CommunityPost: "authorId", PostComment: "authorId", PostLike: "userId" },
     Order: { OrderStatusHistory: "orderId", Dispute: "orderId", Review: "orderId" },
-    CardCatalog: { Listing: "cardId", PriceHistory: "cardId" },
+    CardCatalog: { PriceHistory: "cardId" },
     CommunityPost: { PostComment: "postId", PostLike: "postId" },
     Dispute: { DisputeEvidence: "disputeId" },
   }
-  return fkMap[parentTable]?.[childTable] ?? null
+  // parentFk: column in PARENT table referencing child.id (for one-to-one with FK on parent)
+  const fkParent: Record<string, Record<string, string>> = {
+    Listing: { SellerProfile: "sellerId", CardCatalog: "cardId" },
+    SellerProfile: { User: "userId", BankAccount: "sellerId", SellerSubscription: "sellerId" },
+    Order: { Listing: "listingId", User: "buyerId" },
+  }
+  return {
+    fkColumn: fkChild[parentTable]?.[childTable] ?? null,
+    parentFk: fkParent[parentTable]?.[childTable] ?? null,
+  }
 }
 
 function buildSelectString(

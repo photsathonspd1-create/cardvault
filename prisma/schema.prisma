@@ -1,0 +1,669 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerified   DateTime?
+  passwordHash    String?
+  name            String
+  username        String    @unique
+  avatar          String?
+  phone           String?
+  phoneVerified   Boolean   @default(false)
+  lineId          String?   @unique
+  role            Role      @default(USER)
+  isActive        Boolean   @default(true)
+  isBanned        Boolean   @default(false)
+  banReason       String?
+  bannedAt        DateTime?
+  sellerProfile   SellerProfile?
+  accounts        Account[]
+  sessions        Session[]
+  buyerOrders     Order[]           @relation("BuyerOrders")
+  sellerOrders    Order[]           @relation("SellerOrders")
+  reviewsGiven    Review[]          @relation("ReviewsGiven")
+  reviewsReceived Review[]          @relation("ReviewsReceived")
+  reports         Report[]
+  watchlist       Watchlist[]
+  notifications   Notification[]
+  disputes        Dispute[]         @relation("DisputeRaiser")
+  priceAlerts     PriceAlert[]
+  communityPosts  CommunityPost[]
+  postComments    PostComment[]
+  postLikes       PostLike[]
+  forumThreads    ForumThread[]
+  forumReplies    ForumReply[]
+  scammerReports  ScammerReport[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([email])
+  @@index([username])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model SellerProfile {
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  user            User       @relation(fields: [userId], references: [id])
+  displayName     String
+  bio             String?    @db.Text
+  tier            SellerTier @default(BRONZE)
+  isKycVerified   Boolean    @default(false)
+  kycStatus       KycStatus  @default(NONE)
+  kycIdCardUrl    String?
+  kycSelfieUrl    String?
+  kycSubmittedAt  DateTime?
+  kycReviewedAt   DateTime?
+  kycNote         String?
+  depositAmount   Int        @default(0)
+  depositStatus   String     @default("NONE")
+  totalSales      Int        @default(0)
+  totalRevenue    Int        @default(0)
+  completedOrders Int        @default(0)
+  cancelledOrders Int        @default(0)
+  disputesLost    Int        @default(0)
+  rating          Float      @default(0)
+  ratingCount     Int        @default(0)
+  bankAccount     BankAccount?
+  subscription    SellerSubscription?
+  listings        Listing[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SellerSubscription {
+  id          String    @id @default(cuid())
+  sellerId    String    @unique
+  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+  plan        PlanType
+  price       Int
+  startedAt   DateTime
+  expiresAt   DateTime
+  autoRenew   Boolean   @default(true)
+  omiseSubId  String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+model BankAccount {
+  id            String        @id @default(cuid())
+  sellerId      String        @unique
+  seller        SellerProfile @relation(fields: [sellerId], references: [id])
+  bankCode      String
+  bankName      String
+  accountNumber String
+  isVerified    Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+}
+
+model CardCatalog {
+  id              String    @id @default(cuid())
+  tcgApiId        String?   @unique
+  series          CardSeries
+  name            String
+  nameTh          String?
+  setName         String
+  setCode         String
+  cardNumber      String
+  rarity          String
+  artist          String?
+  imageUrl        String
+  imageUrlHi      String?
+  types           String[]
+  hp              Int?
+  supertype       String?
+  marketPriceRaw  Int?
+  marketPriceExt  Int?
+  priceUpdatedAt  DateTime?
+  listings        Listing[]
+  priceHistory    PriceHistory[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([series, setCode, cardNumber])
+  @@index([name])
+  @@index([series])
+}
+
+model PriceHistory {
+  id          String      @id @default(cuid())
+  cardId      String
+  card        CardCatalog @relation(fields: [cardId], references: [id])
+  price       Int
+  condition   Condition
+  source      String
+  recordedAt  DateTime    @default(now())
+  @@index([cardId, recordedAt])
+}
+
+model Listing {
+  id              String        @id @default(cuid())
+  sellerId        String
+  seller          SellerProfile @relation(fields: [sellerId], references: [id])
+  cardId          String?
+  card            CardCatalog?  @relation(fields: [cardId], references: [id])
+  customName      String?
+  customSet       String?
+  customSeries    String?
+  series          CardSeries
+  condition       Condition
+  language        CardLanguage  @default(THAI)
+  isGraded        Boolean       @default(false)
+  gradingCompany  String?
+  gradeScore      String?
+  gradeCertNo     String?
+  gradeSlabImage  String?
+  price           Int
+  originalPrice   Int?
+  isNegotiable    Boolean       @default(false)
+  quantity        Int           @default(1)
+  soldCount       Int           @default(0)
+  description     String?       @db.Text
+  images          ListingImage[]
+  videoUrl        String?
+  shippingOptions ShippingOption[]
+  weight          Int?
+  status          ListingStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+  isFeatured      Boolean       @default(false)
+  featuredUntil   DateTime?
+  views           Int           @default(0)
+  watchCount      Int           @default(0)
+  shareCount      Int           @default(0)
+  orders          Order[]
+  reports         Report[]
+  watchlists      Watchlist[]
+  priceAlerts     PriceAlert[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime?
+  @@index([series, status])
+  @@index([price])
+  @@index([createdAt])
+  @@index([sellerId])
+}
+
+model ListingImage {
+  id        String  @id @default(cuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url       String
+  type      String
+  order     Int     @default(0)
+}
+
+model ShippingOption {
+  id            String  @id @default(cuid())
+  listingId     String
+  listing       Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  provider      String
+  name          String
+  price         Int
+  estimatedDays String
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique @default(cuid())
+  listingId       String
+  listing         Listing     @relation(fields: [listingId], references: [id])
+  buyerId         String
+  buyer           User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User        @relation("SellerOrders", fields: [sellerId], references: [id])
+  cardName        String
+  cardImage       String
+  condition       String
+  quantity        Int
+  unitPrice       Int
+  subtotal        Int
+  shippingFee     Int
+  platformFee     Int
+  totalAmount     Int
+  sellerReceives  Int
+  shippingName    String
+  shippingPhone   String
+  shippingAddress String      @db.Text
+  shippingDistrict String
+  shippingProvince String
+  shippingPostcode String
+  shippingProvider String?
+  trackingNumber  String?
+  shippedAt       DateTime?
+  estimatedDelivery DateTime?
+  paymentMethod   String?
+  omiseChargeId   String?     @unique
+  paidAt          DateTime?
+  escrowStatus    EscrowStatus @default(HOLDING)
+  escrowReleaseAt DateTime?
+  releasedAt      DateTime?
+  status          OrderStatus @default(PENDING_PAYMENT)
+  cancelReason    String?
+  cancelledAt     DateTime?
+  deliveredAt     DateTime?
+  confirmedAt     DateTime?
+  completedAt     DateTime?
+  dispute         Dispute?
+  review          Review?
+  statusHistory   OrderStatusHistory[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  status    String
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+}
+
+model Dispute {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  raisedById    String
+  raisedBy      User          @relation("DisputeRaiser", fields: [raisedById], references: [id])
+  reason        DisputeReason
+  description   String        @db.Text
+  evidence      DisputeEvidence[]
+  status        DisputeStatus @default(OPEN)
+  adminNote     String?       @db.Text
+  resolution    String?
+  refundAmount  Int?
+  sellerRespondBy DateTime?
+  adminResolveBy  DateTime?
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DisputeEvidence {
+  id        String  @id @default(cuid())
+  disputeId String
+  dispute   Dispute @relation(fields: [disputeId], references: [id])
+  addedById String
+  type      String
+  url       String?
+  content   String? @db.Text
+  side      String
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  reviewerId  String
+  reviewer    User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  revieweeId  String
+  reviewee    User     @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  rating      Int
+  comment     String?  @db.Text
+  imageUrl    String?
+  type        String
+  sellerReply String?  @db.Text
+  repliedAt   DateTime?
+  isHidden    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  @@index([revieweeId])
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([userId, listingId])
+}
+
+model PriceAlert {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  listingId   String?
+  listing     Listing? @relation(fields: [listingId], references: [id])
+  cardName    String
+  series      String?
+  targetPrice Int
+  isActive    Boolean  @default(true)
+  triggeredAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId, isRead])
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  listingId   String
+  listing     Listing      @relation(fields: [listingId], references: [id])
+  reporterId  String
+  reporter    User         @relation(fields: [reporterId], references: [id])
+  reason      ReportReason
+  description String?      @db.Text
+  status      String       @default("PENDING")
+  adminNote   String?
+  createdAt   DateTime     @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+  @@index([targetType, targetId])
+}
+
+model SystemSetting {
+  key       String @id
+  value     String @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════
+// COMMUNITY
+// ═══════════════════════════════════════
+
+model CommunityPost {
+  id             String   @id @default(cuid())
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id])
+  content        String   @db.Text
+  images         String[]
+  hashtags       String[]
+  taggedCards    String[]
+  taggedListings String[]
+  type           PostType @default(GENERAL)
+  likeCount      Int      @default(0)
+  commentCount   Int      @default(0)
+  isPinned       Boolean  @default(false)
+  isHidden       Boolean  @default(false)
+  comments       PostComment[]
+  likes          PostLike[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([authorId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model PostComment {
+  id        String         @id @default(cuid())
+  postId    String
+  post      CommunityPost  @relation(fields: [postId], references: [id])
+  authorId  String
+  author    User           @relation(fields: [authorId], references: [id])
+  content   String         @db.Text
+  parentId  String?
+  parent    PostComment?   @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   PostComment[]  @relation("CommentReplies")
+  createdAt DateTime       @default(now())
+}
+
+model PostLike {
+  id     String        @id @default(cuid())
+  postId String
+  post   CommunityPost @relation(fields: [postId], references: [id])
+  userId String
+  user   User          @relation(fields: [userId], references: [id])
+  @@unique([postId, userId])
+}
+
+// ═══════════════════════════════════════
+// FORUM
+// ═══════════════════════════════════════
+
+model ForumThread {
+  id         String       @id @default(cuid())
+  authorId   String
+  author     User         @relation(fields: [authorId], references: [id])
+  title      String
+  content    String       @db.Text
+  category   TcgCategory
+  isPinned   Boolean      @default(false)
+  isLocked   Boolean      @default(false)
+  viewCount  Int          @default(0)
+  replyCount Int          @default(0)
+  replies    ForumReply[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  @@index([category])
+  @@index([createdAt])
+}
+
+model ForumReply {
+  id           String      @id @default(cuid())
+  threadId     String
+  thread       ForumThread @relation(fields: [threadId], references: [id])
+  authorId     String
+  author       User        @relation(fields: [authorId], references: [id])
+  content      String      @db.Text
+  upvoteCount  Int         @default(0)
+  isBestAnswer Boolean     @default(false)
+  parentId     String?
+  createdAt    DateTime    @default(now())
+}
+
+// ═══════════════════════════════════════
+// TRUST & SAFETY
+// ═══════════════════════════════════════
+
+model ScammerReport {
+  id           String               @id @default(cuid())
+  reporterId   String
+  reporter     User                 @relation(fields: [reporterId], references: [id])
+  phone        String?
+  bankCode     String?
+  bankNumber   String?
+  bankName     String?
+  facebookUrl  String?
+  lineId       String?
+  description  String               @db.Text
+  evidenceUrls String[]
+  status       ScammerReportStatus  @default(PENDING)
+  adminNote    String?
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  isPublic     Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  @@index([phone])
+  @@index([bankNumber])
+  @@index([status])
+}
+
+enum Role {
+  USER
+  SELLER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum SellerTier {
+  BRONZE
+  SILVER
+  GOLD
+  VERIFIED_PRO
+}
+
+enum KycStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CardSeries {
+  POKEMON
+  YUGIOH
+  MTG
+  ONE_PIECE
+  VANGUARD
+  DIGIMON
+  OTHER
+}
+
+enum CardLanguage {
+  THAI
+  JAPANESE
+  ENGLISH
+  KOREAN
+  OTHER
+}
+
+enum Condition {
+  MINT
+  NEAR_MINT
+  EXCELLENT
+  GOOD
+  PLAYED
+  POOR
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SOLD
+  PAUSED
+  EXPIRED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  DISPUTED
+  CANCELLED
+  REFUNDED
+}
+
+enum EscrowStatus {
+  HOLDING
+  RELEASING
+  RELEASED
+  REFUNDED
+  FROZEN
+}
+
+enum DisputeReason {
+  FAKE_CARD
+  NOT_AS_DESCRIBED
+  NOT_RECEIVED
+  WRONG_ITEM
+  DAMAGED_IN_TRANSIT
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  SELLER_REPLIED
+  UNDER_REVIEW
+  RESOLVED_BUYER
+  RESOLVED_SELLER
+  RESOLVED_PARTIAL
+  ESCALATED
+  CLOSED
+}
+
+enum ReportReason {
+  FAKE_CARD
+  WRONG_PRICE
+  DUPLICATE
+  INAPPROPRIATE
+  COPYRIGHT
+  OTHER
+}
+
+enum PostType {
+  GENERAL
+  SHOW
+  ASK_PRICE
+  SELL
+  NEWS
+}
+
+enum TcgCategory {
+  POKEMON
+  YUGIOH
+  ONE_PIECE
+  MTG
+  VANGUARD
+  DIGIMON
+  OTHER
+}
+
+enum ScammerReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PlanType {
+  FREE
+  PRO
+  BUSINESS
+}

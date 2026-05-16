@@ -333,6 +333,28 @@ function buildSelectStringSimple(
   return parts.join(",")
 }
 
+/** Apply Prisma-style `take` on nested relation arrays (PostgREST returns all). */
+function applyNestedTake(
+  rows: Record<string, unknown>[],
+  include: Record<string, unknown>
+): Record<string, unknown>[] {
+  for (const [relation, spec] of Object.entries(include)) {
+    if (!spec || typeof spec !== "object" || spec === true || spec === false) continue
+    const relSpec = spec as Record<string, unknown>
+    const take = relSpec.take as number | undefined
+    if (take === undefined) continue
+
+    const tableName = RELATION_MAP[relation] ?? relation
+    for (const row of rows) {
+      const val = row[tableName]
+      if (Array.isArray(val)) {
+        row[tableName] = val.slice(0, take)
+      }
+    }
+  }
+  return rows
+}
+
 /** Guess if a relation is one-to-one (returns single object) or one-to-many (returns array). */
 function isOneToOne(parentTable: string, childTable: string): boolean {
   const oneToOne: Record<string, string[]> = {
@@ -695,11 +717,11 @@ function createModelProxy(modelName: string) {
         distinct?: unknown
       }
 
-      // Build select string (without embedded limit/order — those are handled in JS)
+      // Build embedded select string (e.g. "*,ListingImage(*),SellerProfile(*,User(name,username))")
       const selectStr = buildSelectStringSimple(include, select)
-      
-      // Try with plain select first, then fall back to full select
-      let query = supabaseAdmin.from(table).select("*", { count: "exact" })
+
+      // Use the embedded select directly — PostgREST handles nested relations in one query
+      let query = supabaseAdmin.from(table).select(selectStr, { count: "exact" })
 
       // Apply filters
       if (where) {
@@ -721,18 +743,39 @@ function createModelProxy(modelName: string) {
       const { data, error } = await query
       if (error) {
         console.error(`[supabase-db] findMany ${table} error:`, error.message)
+        // Fallback: try with plain select if embedded select fails
+        if (include) {
+          console.warn(`[supabase-db] Retrying ${table} with plain select + fetchIncludes fallback`)
+          let fallbackQuery = supabaseAdmin.from(table).select("*", { count: "exact" })
+          if (where) fallbackQuery = applyWhereClause(fallbackQuery, where)
+          if (orderBy) fallbackQuery = applyOrdering(fallbackQuery, orderBy)
+          if (skip !== undefined && take !== undefined) {
+            fallbackQuery = fallbackQuery.range(skip, skip + take - 1)
+          } else if (take !== undefined) {
+            fallbackQuery = fallbackQuery.range(0, take - 1)
+          }
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery
+          if (fallbackError) {
+            console.error(`[supabase-db] fallback findMany ${table} error:`, fallbackError.message)
+            return []
+          }
+          let result = fallbackData ?? []
+          if (result.length > 0) {
+            try {
+              result = await fetchIncludes(table, result, include)
+            } catch (incErr) {
+              console.error(`[supabase-db] fetchIncludes fallback ${table} error:`, incErr)
+            }
+          }
+          return result
+        }
         return []
       }
 
-      // Fetch embedded resources separately
+      // Apply Prisma-style take on nested relations (PostgREST returns all nested rows)
       let result = data ?? []
       if (include && result.length > 0) {
-        try {
-          result = await fetchIncludes(table, result, include)
-        } catch (incErr) {
-          console.error(`[supabase-db] fetchIncludes ${table} error:`, incErr)
-          // Return data without includes rather than failing
-        }
+        result = applyNestedTake(result, include)
       }
       return result
     },
@@ -749,7 +792,8 @@ function createModelProxy(modelName: string) {
         select?: Record<string, unknown>
       }
 
-      let query = supabaseAdmin.from(table).select("*")
+      const selectStr = buildSelectStringSimple(include, select)
+      let query = supabaseAdmin.from(table).select(selectStr)
 
       // Apply unique filters
       query = applyWhereClause(query, where)
@@ -758,19 +802,24 @@ function createModelProxy(modelName: string) {
       const { data, error } = await query
       if (error) {
         console.error(`[supabase-db] findUnique ${table} error:`, error.message)
+        // Fallback: plain select + fetchIncludes
+        if (include) {
+          let fb = supabaseAdmin.from(table).select("*")
+          fb = applyWhereClause(fb, where)
+          fb = fb.limit(1).maybeSingle()
+          const { data: fbData, error: fbErr } = await fb
+          if (fbErr || !fbData) return null
+          try {
+            const [enriched] = await fetchIncludes(table, [fbData], include)
+            return enriched
+          } catch { return fbData }
+        }
         return null
       }
       if (!data) return null
 
-      // Fetch includes if needed
       if (include) {
-        try {
-          const [enriched] = await fetchIncludes(table, [data], include)
-          return enriched
-        } catch (incErr) {
-          console.error(`[supabase-db] fetchIncludes ${table} error:`, incErr)
-          return data
-        }
+        return applyNestedTake([data], include)[0]
       }
       return data
     },

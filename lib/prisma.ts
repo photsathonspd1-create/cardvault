@@ -394,8 +394,9 @@ function extractData(
 // ─── Model Proxy ──────────────────────────────────────────────────
 
 function createModelProxy(modelName: string) {
-  // Prisma model names are PascalCase, table names match
-  const table = modelName
+  // Prisma model names are camelCase (e.g. listing, cardCatalog)
+  // PostgreSQL table names are PascalCase (e.g. Listing, CardCatalog)
+  const table = modelName.charAt(0).toUpperCase() + modelName.slice(1)
 
   return {
     async findMany(args: Record<string, unknown> = {}) {

@@ -1,8 +1,8 @@
 # 🃏 CardVault — Agent Handoff Document
-**Last Updated:** 2026-05-16 23:14 GMT+8
+**Last Updated:** 2026-05-16 23:20 GMT+8
 **Repository:** https://github.com/photsathonspd1-create/cardvault
 **Branch:** main
-**Last Commit:** `1befb08` — docs: update README + .env.example
+**Last Commit:** `434b794` — feat: complete all remaining enhancements
 
 ---
 
@@ -13,6 +13,7 @@ Phase 1 MVP:     ████████████████████ 10
 Phase 2:         ████████████████████ 100% ✅
 TypeScript:      ████████████████████   0 errors ✅
 Build:           ████████████████████ success ✅
+Enhancements:    ████████████████████ 100% ✅
 Phase 3:         ░░░░░░░░░░░░░░░░░░░░   0%
 ```
 
@@ -162,12 +163,12 @@ Phase 3:         ░░░░░░░░░░░░░░░░░░░░   
 
 ## 🔧 สิ่งที่ต้องทำต่อ (Optional Enhancements)
 
-### Priority 1 — ถ้าจะ launch จริง
-- [ ] **Omise frontend integration** — Omise.js drop-in UI สำหรับ PromptPay QR + บัตรเครดิต (backend รองรับแล้ว เหลือ frontend ใน checkout page)
-- [ ] **Card scanner integration ในหน้า `/sell/new`** — component มีแล้ว (CardScanner.tsx) แต่ต้องเช็คว่าใช้จริงใน wizard หรือยัง
-- [ ] **Price chart integration ใน listing detail** — component มีแล้ว (price-chart.tsx) ต้องใส่ในหน้า listing detail
-- [ ] **Email verification flow** — ส่ง email verify ตอน register
-- [ ] **Admin KYC review UI** — ปัจจุบันมีแค่ submission flow ยังไม่มีหน้า admin อนุมัติ KYC
+### Priority 1 — เสร็จหมดแล้ว ✅
+- [x] **Omise frontend integration** — checkout page แสดง PromptPay QR / credit card form หลังสร้าง order
+- [x] **Card scanner integration ในหน้า `/sell/new`** — เพิ่ม step 0 สแกนการ์ดด้วยกล้อง + auto-fill ข้อมูลผ่าน OCR
+- [x] **Price chart integration ใน listing detail** — PriceHistorySection server component + SimilarListingsCard
+- [x] **Email verification flow** — POST/GET /api/auth/verify-email (Thai HTML template)
+- [x] **Admin KYC review UI** — /admin/kyc page พร้อม approve/reject + ดูรูปบัตร
 
 ### Priority 2 — ถ้ามีเวลา
 - [ ] Google OAuth provider
@@ -336,10 +337,10 @@ git push
 ---
 
 ## 📊 Stats
-- **Total files:** 124 TypeScript files
+- **Total files:** 127 TypeScript files
 - **Total lines:** ~15,015
 - **Pages:** 26
-- **API Routes:** 26
+- **API Routes:** 28
 - **Components:** 33
 - **Services:** 4
 - **Lib modules:** 7

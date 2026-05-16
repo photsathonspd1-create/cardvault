@@ -7,6 +7,8 @@ import { MessageCircle, Eye, Pin, Lock, Plus } from "lucide-react"
 import { TcgCategory } from "@prisma/client"
 import { auth } from "@/lib/auth"
 
+export const dynamic = "force-dynamic"
+
 const CATEGORY_LABELS: Record<string, string> = {
   POKEMON: "โปเกมอน",
   YUGIOH: "Yu-Gi-Oh!",

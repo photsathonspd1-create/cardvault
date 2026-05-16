@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { formatPrice, ORDER_STATUS_LABELS, getRelativeTime } from "@/lib/utils"
 import { Package, Truck, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function SellerOrdersPage() {
   const session = await auth()
   const userId = (session!.user as any).id

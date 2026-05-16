@@ -6,6 +6,8 @@ import Image from "next/image"
 import { formatPrice, SERIES_LABELS, LISTING_STATUS_LABELS, getRelativeTime } from "@/lib/utils"
 import { CheckCircle, XCircle, Eye } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminListingsPage() {
   const pendingListings = await prisma.listing.findMany({
     where: { status: "PENDING_REVIEW" },

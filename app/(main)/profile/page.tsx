@@ -8,6 +8,8 @@ import { getInitials, formatPrice, getRelativeTime } from "@/lib/utils"
 import Link from "next/link"
 import { User, ShoppingBag, Star, Shield, Settings, Edit } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function ProfilePage() {
   const session = await auth()
   const userId = (session!.user as any).id

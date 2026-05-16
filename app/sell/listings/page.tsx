@@ -8,6 +8,8 @@ import Image from "next/image"
 import { formatPrice, LISTING_STATUS_LABELS, SERIES_LABELS, getRelativeTime } from "@/lib/utils"
 import { Plus, Eye, Edit, Trash2, Pause, Play } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function SellerListingsPage() {
   const session = await auth()
   const userId = (session!.user as any).id

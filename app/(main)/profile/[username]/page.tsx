@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getInitials } from "@/lib/utils"
 import { Star, Shield, Package, ShoppingBag, MessageCircle } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 interface ProfilePageProps {
   params: { username: string }
 }

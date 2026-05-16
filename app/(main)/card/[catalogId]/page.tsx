@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator"
 import { TrendingUp, TrendingDown, ShoppingBag, Star, ExternalLink } from "lucide-react"
 import type { Metadata } from "next"
 
+export const dynamic = "force-dynamic"
+
 interface CardPageProps {
   params: { catalogId: string }
 }

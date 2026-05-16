@@ -11,6 +11,8 @@ import { Pin, Lock, Eye, MessageCircle, ArrowLeft, CheckCircle, ThumbsUp } from 
 import Link from "next/link"
 import { ForumReplyForm } from "./reply-form"
 
+export const dynamic = "force-dynamic"
+
 const CATEGORY_LABELS: Record<string, string> = {
   POKEMON: "โปเกมอน",
   YUGIOH: "Yu-Gi-Oh!",

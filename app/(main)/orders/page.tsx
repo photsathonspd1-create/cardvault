@@ -8,6 +8,8 @@ import Image from "next/image"
 import { formatPrice, ORDER_STATUS_LABELS, ESCROW_STATUS_LABELS, getRelativeTime } from "@/lib/utils"
 import { Package, Truck, CheckCircle, AlertTriangle, ExternalLink, Shield } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function OrdersPage() {
   const session = await auth()
   const userId = (session!.user as any).id

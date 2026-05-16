@@ -8,6 +8,8 @@ import { formatPrice } from "@/lib/utils"
 import { getTierProgress } from "@/services/tier.service"
 import { TrendingUp, Crown } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function SellerAnalyticsPage() {
   const session = await auth()
   const userId = (session!.user as Record<string, unknown>).id as string

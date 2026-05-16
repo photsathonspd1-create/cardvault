@@ -19,6 +19,8 @@ import { CardSeries, Condition, ListingStatus } from "@prisma/client"
 import { BrowseFilters } from "@/components/browse-filters"
 import type { Metadata } from "next"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "ค้นหาการ์ด TCG",
   description:

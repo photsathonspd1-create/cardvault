@@ -12,6 +12,8 @@ import { Shield, Truck, Package, CheckCircle, AlertTriangle, Clock, MapPin } fro
 import { OrderConfirmButton } from "@/components/order/order-confirm-button"
 import { OrderDisputeButton } from "@/components/order/order-dispute-button"
 
+export const dynamic = "force-dynamic"
+
 interface OrderDetailPageProps {
   params: { id: string }
 }

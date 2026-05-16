@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getInitials, getRelativeTime } from "@/lib/utils"
 import { Shield, Ban, CheckCircle, User } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({
     include: {

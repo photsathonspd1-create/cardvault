@@ -131,7 +131,7 @@ export function PriceChart({
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                formatter={(value: number) => [formatPrice(value), "ราคา"]}
+                formatter={(value: any) => [formatPrice(Number(value ?? 0)), "ราคา"]}
                 labelStyle={{ color: "#a3a3a3" }}
               />
               <Line

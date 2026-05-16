@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { formatPrice, getRelativeTime } from "@/lib/utils"
 import { AlertTriangle, MessageCircle, CheckCircle } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 const DISPUTE_REASON_LABELS: Record<string, string> = {
   FAKE_CARD: "การ์ดปลอม",
   NOT_AS_DESCRIBED: "ไม่ตรงตามที่โฆษณา",

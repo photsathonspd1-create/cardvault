@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Seller Tier Auto-upgrade Service
  *

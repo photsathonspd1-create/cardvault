@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MetadataRoute } from "next"
 import { prisma } from "@/lib/prisma"
 

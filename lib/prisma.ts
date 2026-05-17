@@ -568,6 +568,113 @@ function isOneToOne(parentTable: string, childTable: string): boolean {
   return (oneToOne[parentTable] ?? []).includes(childTable)
 }
 
+/** Unwrap one-to-one PostgREST arrays into single objects.
+ *  PostgREST always returns related data as arrays, even for 1:1 relations.
+ *  This function detects 1:1 relations (via isOneToOne) and converts
+ *  single-element arrays to objects, empty arrays to null.
+ */
+function unwrapOneToOneArrays(
+  rows: Record<string, unknown>[],
+  include: Record<string, unknown>,
+  parentTable: string = ""
+): Record<string, unknown>[] {
+  if (!include) return rows
+  for (const row of rows) {
+    for (const [relation, spec] of Object.entries(include)) {
+      if (relation === "_count") continue
+      const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
+      if (!isOneToOne(parentTable || "unknown", tableName)) continue
+
+      // Use relation key if present, else tableName
+      const key = relation in row ? relation : (tableName in row ? tableName : null)
+      if (!key) continue
+      const val = row[key]
+      if (!Array.isArray(val)) continue
+
+      if (val.length === 0) {
+        row[key] = null
+      } else {
+        row[key] = val[0]
+      }
+
+      // Recursively unwrap nested includes
+      if (spec && typeof spec === "object" && spec !== true && spec !== false) {
+        const nestedInclude = (spec as Record<string, unknown>).include as Record<string, unknown> | undefined
+        const nestedSelect = (spec as Record<string, unknown>).select as Record<string, unknown> | undefined
+        const nestedSpec = nestedInclude || nestedSelect
+        if (nestedSpec && row[key] && typeof row[key] === "object") {
+          unwrapOneToOneArrays([row[key] as Record<string, unknown>], nestedSpec, tableName)
+        }
+      }
+    }
+  }
+  return rows
+}
+
+/** Process nested _count entries inside relation includes.
+ *  The main PostgREST path only processes top-level _count.
+ *  This function handles _count inside nested includes (e.g. sellerProfile._count.listings).
+ */
+async function processNestedCounts(
+  rows: Record<string, unknown>[],
+  include: Record<string, unknown>,
+  parentTable: string = ""
+): Promise<Record<string, unknown>[]> {
+  if (!include) return rows
+  const result = rows.map((r) => ({ ...r }))
+
+  for (const row of result) {
+    for (const [relation, spec] of Object.entries(include)) {
+      if (relation === "_count") continue
+      if (!spec || typeof spec !== "object" || spec === true || spec === false) continue
+
+      const relSpec = spec as Record<string, unknown>
+      const nestedInclude = relSpec.include as Record<string, unknown> | undefined
+      if (!nestedInclude || !nestedInclude._count) continue
+
+      const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
+      const key = relation in row ? relation : (tableName in row ? tableName : null)
+      if (!key) continue
+
+      const nestedVal = row[key]
+      const nestedRows = Array.isArray(nestedVal) ? nestedVal : (nestedVal && typeof nestedVal === "object" ? [nestedVal as Record<string, unknown>] : [])
+      if (nestedRows.length === 0) continue
+
+      const countSpec = nestedInclude._count as Record<string, unknown>
+      const countSelect = countSpec.select as Record<string, boolean> | undefined
+      if (!countSelect) continue
+
+      for (const nestedRow of nestedRows) {
+        if (!nestedRow._count) nestedRow._count = {} as Record<string, number>
+        for (const [countRelation, enabled] of Object.entries(countSelect)) {
+          if (!enabled) continue
+          const countTable = resolveRelation(tableName, countRelation)
+          const fk = guessForeignKey(tableName, countTable, countRelation)
+          let count = 0
+          if (fk.fkColumn) {
+            const { count: c } = await supabaseAdmin
+              .from(countTable)
+              .select("id", { count: "exact", head: true })
+              .eq(fk.fkColumn, nestedRow.id)
+            count = c ?? 0
+          } else if (fk.parentFk) {
+            const fkVal = nestedRow[fk.parentFk]
+            if (fkVal) {
+              const { count: c } = await supabaseAdmin
+                .from(countTable)
+                .select("id", { count: "exact", head: true })
+                .eq("id", fkVal)
+              count = c ?? 0
+            }
+          }
+          ;(nestedRow._count as Record<string, number>)[countRelation] = count
+        }
+      }
+    }
+  }
+  return result
+}
+
 /** Fetch embedded resources separately (avoids PostgREST select issues). */
 async function fetchIncludes(
   parentTable: string,
@@ -1156,6 +1263,13 @@ function createModelProxy(modelName: string) {
       if (include && result.length > 0) {
         result = applyNestedTake(result, include, table)
         result = remapTableKeys(result, include, table)
+        result = unwrapOneToOneArrays(result, include, table)
+        // Process nested _count inside relation includes (e.g. sellerProfile._count.listings)
+        try {
+          result = await processNestedCounts(result, include, table)
+        } catch (ncErr) {
+          console.error(`[supabase-db] processNestedCounts ${table} error:`, ncErr)
+        }
         // Process _count if present (not handled by PostgREST select)
         if (include._count && typeof include._count === "object") {
           const countSpec = include._count as Record<string, unknown>
@@ -1236,6 +1350,14 @@ function createModelProxy(modelName: string) {
       if (include) {
         result = applyNestedTake([result], include, table)[0]
         result = remapTableKeys([result], include, table)[0]
+        result = unwrapOneToOneArrays([result], include, table)[0]
+        // Process nested _count inside relation includes
+        try {
+          const [enriched] = await processNestedCounts([result], include, table)
+          result = enriched
+        } catch (ncErr) {
+          console.error(`[supabase-db] processNestedCounts findUnique ${table} error:`, ncErr)
+        }
         // Process _count if present (not handled by PostgREST select)
         if (include._count && typeof include._count === "object") {
           const countSpec = include._count as Record<string, unknown>

@@ -334,6 +334,28 @@ async function main() {
 
   console.log("✅ Created card catalog entries")
 
+  // Create price history for catalog cards
+  const conditions: Condition[] = ["MINT", "NEAR_MINT", "EXCELLENT"]
+  for (const card of createdCards) {
+    const basePrice = Math.floor(Math.random() * 500000) + 100000
+    for (let daysAgo = 90; daysAgo >= 0; daysAgo -= 3) {
+      const date = new Date()
+      date.setDate(date.getDate() - daysAgo)
+      const variation = Math.floor((Math.random() - 0.5) * basePrice * 0.15)
+      await prisma.priceHistory.create({
+        data: {
+          cardId: card.id,
+          price: Math.max(10000, basePrice + variation + Math.floor((90 - daysAgo) * basePrice * 0.002)),
+          condition: conditions[Math.floor(Math.random() * conditions.length)],
+          source: "market_scan",
+          recordedAt: date,
+        },
+      })
+    }
+  }
+
+  console.log("✅ Created price history entries")
+
   // Create listings
   const listingsData = [
     { cardIndex: 0, seller: seller1, condition: "MINT" as Condition, price: 1590000, isGraded: true, gradingCompany: "PSA", gradeScore: "10", language: "ENGLISH" as CardLanguage, quantity: 1 },
@@ -527,6 +549,153 @@ async function main() {
   })
 
   console.log("✅ Created notifications")
+
+  // Create community posts
+  const post1 = await prisma.communityPost.create({
+    data: {
+      authorId: seller1User.id,
+      content: "เพิ่งได้ Charizard VMAX มาครับ! การ์ดสภาพ mint เลย ใครสะสมโปเกม่อนแนะนำเลย 🔥",
+      type: "SHOW",
+      hashtags: ["Pokemon", "Charizard", "VMAX"],
+      likeCount: 12,
+      commentCount: 3,
+    },
+  })
+
+  const post2 = await prisma.communityPost.create({
+    data: {
+      authorId: buyer1.id,
+      content: "อยากถามราคา Blue-Eyes White Dragon 1st Edition ตอนนี้ประมาณเท่าไหร่ครับ? เห็นหลายร้านราคาต่างกันมาก",
+      type: "ASK_PRICE",
+      hashtags: ["YuGiOh", "BlueEyes"],
+      likeCount: 5,
+      commentCount: 7,
+    },
+  })
+
+  const post3 = await prisma.communityPost.create({
+    data: {
+      authorId: seller3User.id,
+      content: "One Piece OP-06 ใกล้จะออกแล้ว! ใครพรีออเดอร์แล้วบ้าง? ผมสั่งไป 2 บ็อกซ์ รอเปิดเลย 🏴‍☠️",
+      type: "NEWS",
+      hashtags: ["OnePiece", "OP06"],
+      likeCount: 24,
+      commentCount: 11,
+    },
+  })
+
+  const post4 = await prisma.communityPost.create({
+    data: {
+      authorId: buyer2.id,
+      content: "แนะนำร้านขาย Sleeve คุณภาพดีหน่อยครับ อยากได้แบบแข็งๆ ป้องกันการ์ดดีๆ",
+      type: "GENERAL",
+      hashtags: ["Sleeve", "อุปกรณ์"],
+      likeCount: 8,
+      commentCount: 5,
+    },
+  })
+
+  const post5 = await prisma.communityPost.create({
+    data: {
+      authorId: admin.id,
+      content: "📢 ประกาศ: CardVault อัปเดตระบบ Escrow ใหม่แล้ว! การซื้อขายปลอดภัยยิ่งขึ้น เงินจะถูกเก็บไว้จนกว่าผู้ซื้อยืนยันรับสินค้า",
+      type: "NEWS",
+      hashtags: ["CardVault", "Escrow", "Safety"],
+      isPinned: true,
+      likeCount: 45,
+      commentCount: 8,
+    },
+  })
+
+  console.log("✅ Created community posts")
+
+  // Create forum threads
+  const thread1 = await prisma.forumThread.create({
+    data: {
+      authorId: seller1User.id,
+      title: "วิธีเช็คการ์ดปลอม Pokémon — จุดสังเกตที่ต้องรู้",
+      content: "สวัสดีครับ ผมขายการ์ดโปเกม่อนมา 3 ปีแล้ว วันนี้จะมาแชร์วิธีเช็คการ์ดปลอมให้ทุกคน\n\n1. ดู texture ของการ์ด — ของจริงจะมี texture ละเอียด\n2. ทดสอบแสง — ส่องไฟดูว่าแสงผ่านสม่ำเสมอมั้ย\n3. น้ำหนัก — ของจริงจะหนักกว่าเล็กน้อย\n4. ขอบการ์ด — ของจริงขอบเรียบเนียน\n\nหวังว่าจะเป็นประโยชน์ครับ!",
+      category: "POKEMON",
+      viewCount: 234,
+      replyCount: 12,
+    },
+  })
+
+  const thread2 = await prisma.forumThread.create({
+    data: {
+      authorId: buyer2.id,
+      title: "เริ่มเล่น Yu-Gi-Oh! ควรเริ่มจากอะไรดี?",
+      content: "ผมเพิ่งสนใจจะเริ่มเล่น Yu-Gi-Oh! ครับ ไม่รู้จะเริ่มจาก Structure Deck ไหนดี งบประมาณ 1000-2000 บาท ช่วยแนะนำหน่อยครับ",
+      category: "YUGIOH",
+      viewCount: 156,
+      replyCount: 8,
+    },
+  })
+
+  const thread3 = await prisma.forumThread.create({
+    data: {
+      authorId: seller3User.id,
+      title: "One Piece TCG — Meta ตอนนี้เล่นอะไรดี?",
+      content: "One Piece TCG ตอนนี้ meta เปลี่ยนเยอะเลยครับ อยากถามว่าเด็คไหนคุ้มค่าที่จะลงทุน? ผมเล่น Red/Purple Luffy อยู่ แต่รู้สึกว่าจะไม่ค่อยแข็งแล้ว",
+      category: "ONE_PIECE",
+      viewCount: 189,
+      replyCount: 15,
+    },
+  })
+
+  const thread4 = await prisma.forumThread.create({
+    data: {
+      authorId: admin.id,
+      title: "กฎการซื้อขายใน CardVault — อ่านก่อนโพสต์!",
+      content: "กฎการซื้อขาย:\n\n1. ห้ามลงขายสินค้าผิดกฎหมาย\n2. ต้องระบุราคาและสภาพการ์ดชัดเจน\n3. ห้ามโกง — ใช้ระบบ Escrow เท่านั้น\n4. ให้เกียรติสมาชิกท่านอื่น\n5. รายงานผู้ใช้ที่ทำผิดกฎ\n\nฝ่ากฎ = แบน!",
+      category: "POKEMON",
+      isPinned: true,
+      viewCount: 567,
+      replyCount: 3,
+    },
+  })
+
+  console.log("✅ Created forum threads")
+
+  // Create forum replies
+  await prisma.forumReply.create({
+    data: {
+      threadId: thread1.id,
+      authorId: buyer1.id,
+      content: "ขอบคุณมากครับ! ผมเคยโดนการ์ดปลอมมาทีนึง ตอนนี้เช็คตลอดเลย",
+      upvoteCount: 5,
+    },
+  })
+
+  await prisma.forumReply.create({
+    data: {
+      threadId: thread1.id,
+      authorId: seller3User.id,
+      content: "เพิ่มเติมครับ — ลองใช้แอป TCGPlayer scanner เช็คราคาด้วยก็ดี ราคาจะได้ไม่โดนหลอก",
+      upvoteCount: 8,
+      isBestAnswer: true,
+    },
+  })
+
+  await prisma.forumReply.create({
+    data: {
+      threadId: thread2.id,
+      authorId: seller1User.id,
+      content: "แนะนำ Structure Deck: Beware of Traptrix ครับ เล่นง่าย ราคาไม่แพง แล้วก็แข็งในระดับนึงเลย",
+      upvoteCount: 12,
+    },
+  })
+
+  await prisma.forumReply.create({
+    data: {
+      threadId: thread3.id,
+      authorId: buyer1.id,
+      content: "ตอนนี้ Sakazuki แข็งมากครับ ถ้าลงทุนแนะนำ Blue/Black Sakazuki",
+      upvoteCount: 6,
+    },
+  })
+
+  console.log("✅ Created forum replies")
 
   console.log("\n🎉 Seed completed!")
   console.log("\n📋 Test Accounts:")

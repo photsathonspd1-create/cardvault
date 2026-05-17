@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 18:30 GMT+8
+> **Last updated:** 2026-05-17 19:28 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Latest commit:** `8bf4c78` (feat: homepage redesign - spotlight, hot index, nav update)
+> **Latest commit:** `0470795` (docs: comprehensive handoff prompt)
 > **Branch:** `main` — clean, up to date with origin
 > **Build status:** ✅ `npm run build` passes
 
@@ -140,8 +140,8 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | `GET /api/listings/[id]` | ✅ 200 | Full listing with seller, images, shipping |
 | `GET /api/cards/[id]/price-history` | ✅ 200 | Returns empty array (no history data yet) |
 | `GET /api/users/me` | ✅ 401 | Correctly requires auth |
-| `GET /api/community/posts` | ✅ 401 | Correctly requires auth |
-| `GET /api/forum/threads` | ✅ 401 | Correctly requires auth |
+| `GET /api/community/posts` | ✅ 200 | Public GET (fixed middleware), returns posts with author + counts |
+| `GET /api/forum/threads` | ✅ 200 | Public GET (fixed middleware), returns threads |
 | `POST /api/reports/scammer` | ✅ 401 | Correctly requires auth |
 | `POST /api/cards/identify` | ✅ 401 | Correctly requires auth |
 
@@ -155,17 +155,17 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | 1 | **Omise Payment Integration** | ❌ Not configured | Need `OMISE_PUBLIC_KEY`, `OMISE_SECRET_KEY`, `OMISE_WEBHOOK_SECRET`. Code ready in `lib/omise.ts` |
 | 2 | **Cloudflare R2 Storage** | ❌ Not configured | Need `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`. Code ready in `lib/r2.ts` |
 | 3 | **Resend Email** | ❌ Not configured | Need `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. Templates ready in `lib/resend.ts` |
-| 4 | **CRON_SECRET** | ❌ Not set | Generate: `openssl rand -hex 32`. Escrow auto-release needs this |
+| 4 | **CRON_SECRET** | ⚠️ Generated | `f1707d56ac6f631b21850440fcba808deedcca4e61051016265ed7f1c4c970ae` — needs to be set in Netlify env vars |
 | 5 | **Login Flow E2E Test** | ⚠️ Partially tested | Register page loads (200), login page loads (200), API returns 401 for unauthenticated. Full E2E login with actual credentials untested |
 
 ### Priority 2 — Important Features
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 6 | **Card Scanner Camera Integration** | 🔧 Partial | Tesseract.js integrated but camera UI needs work |
-| 7 | **Price History Charts** | 🔧 Partial | Recharts installed, `PriceChart` component exists, needs real data |
+| 6 | **Card Scanner Camera Integration** | 🔧 Partial | Tesseract.js integrated, camera UI complete (front/back/holo capture, sharpness check, gallery fallback). Needs real device testing |
+| 7 | **Price History Charts** | ✅ Done | Recharts `PriceChart` component integrated into `/card/[catalogId]` page. Seed data generates 30 price points per card (90 days, every 3 days) |
 | 8 | **Browse Search** | ⚠️ Needs verify | Uses `OR` + `contains` + `mode: "insensitive"` — proxy compatibility unknown |
-| 9 | **Community/Forum Seed Data** | ❌ Empty | Pages load but no seed data |
-| 10 | **Image Domains** | ❌ Not configured | `next.config.js` needs `images.remotePatterns` for external URLs |
+| 9 | **Community/Forum Seed Data** | ✅ Done | 5 community posts + 4 forum threads + 4 forum replies added to seed. API routes now public (GET) via middleware fix |
+| 10 | **Image Domains** | ✅ Done | Added `images.ygoprodeck.com`, `cards.scryfall.io`, `en.onepiece-cardgame.com`, `ruugptsudyxyozywevcu.supabase.co` to `next.config.js` |
 | 11 | **Remaining pages redesign** | ❌ Not done | checkout, orders list, analytics, subscription, KYC, community, how-it-works, FAQ, contact, escrow-info, terms, privacy |
 
 ### Priority 3 — Nice to Have

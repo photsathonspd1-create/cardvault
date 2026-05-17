@@ -82,7 +82,8 @@ export function middleware(request: NextRequest) {
     "/api/reports/scammer/check",
     "/api/webhooks",
     "/api/debug",
-    
+    "/api/community",
+    "/api/forum",
   ]
 
   const isPublicPath = publicPaths.some(

@@ -21,6 +21,7 @@ interface CatalogListing {
   seller?: { user?: { name?: string | null } }
 }
 import { TrendingUp, TrendingDown, ShoppingBag, Star, ExternalLink } from "lucide-react"
+import { PriceChart } from "@/components/shared/price-chart"
 import type { Metadata } from "next"
 
 export const dynamic = "force-dynamic"
@@ -196,6 +197,17 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Price History Chart */}
+          {card.priceHistory && card.priceHistory.length > 0 && (
+            <PriceChart
+              data={card.priceHistory.map((ph: { recordedAt: Date; price: number }) => ({
+                date: ph.recordedAt.toISOString(),
+                price: ph.price,
+              }))}
+              title="ประวัติราคา"
+            />
           )}
         </div>
 

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -83,14 +83,14 @@ export default async function SellerAnalyticsPage() {
     take: 10,
   })
 
-  const topCards = topCardsRaw.map((c) => ({
+  const topCards = topCardsRaw.map((c: { cardName: string; _count: { id: number }; _sum: { sellerReceives: number | null } }) => ({
     name: c.cardName,
     soldCount: c._count.id,
     revenue: c._sum.sellerReceives ?? 0,
   }))
 
   // Stats
-  const totalViews = profile.listings.reduce((sum, l) => sum + l.views, 0)
+  const totalViews = profile.listings.reduce((sum: number, l: { views: number }) => sum + l.views, 0)
   const totalOrders = profile.completedOrders
   const conversionRate = totalViews > 0 ? (totalOrders / totalViews) * 100 : 0
 

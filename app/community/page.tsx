@@ -98,7 +98,7 @@ export default function CommunityPage() {
             <CardContent className="p-4">
               <div className="flex gap-3">
                 <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarImage src={(session.user as any)?.image} />
+                  <AvatarImage src={(session.user as { image?: string })?.image} />
                   <AvatarFallback className="bg-purple-600/20 text-purple-400">
                     {getInitials(session.user?.name ?? "U")}
                   </AvatarFallback>

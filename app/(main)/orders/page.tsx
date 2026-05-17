@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"
 
 export default async function OrdersPage() {
   const session = await auth()
-  const userId = (session?.user as any)?.id
+  const userId = (session?.user as { id?: string })?.id
 
   const orders = await prisma.order.findMany({
     where: { buyerId: userId },

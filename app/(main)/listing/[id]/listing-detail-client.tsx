@@ -19,9 +19,40 @@ import {
   AlertTriangle,
 } from "lucide-react"
 
+interface ListingImage {
+  id?: string
+  url: string
+  order?: number
+}
+
+interface ListingSeller {
+  tier?: string
+  rating?: number
+  totalSales?: number
+  responseRate?: number
+  createdAt?: string | Date
+  user?: { name?: string | null; username?: string | null; avatar?: string | null }
+}
+
+interface ListingData {
+  id: string
+  customName?: string | null
+  price: number
+  condition: string
+  series: string
+  isGraded?: boolean
+  gradingCompany?: string | null
+  gradeScore?: string | null
+  gradingCertNumber?: string | null
+  isNegotiable?: boolean
+  images?: ListingImage[]
+  seller?: ListingSeller
+  card?: { name?: string | null; setName?: string | null; number?: string | null; language?: string | null }
+}
+
 interface ListingDetailClientProps {
-  listing: any
-  similarListings: any[]
+  listing: ListingData
+  similarListings: ListingData[]
   marketAvgPrice: number | null
 }
 
@@ -74,7 +105,7 @@ export function ListingDetailClient({ listing, similarListings, marketAvgPrice }
           {/* Thumbnails */}
           {listing.images && listing.images.length > 1 && (
             <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide">
-              {listing.images.map((img: any, i: number) => (
+              {listing.images.map((img, i) => (
                 <button
                   key={img.id ?? i}
                   onClick={() => setSelectedImage(i)}

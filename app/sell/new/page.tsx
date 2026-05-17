@@ -59,7 +59,7 @@ export default function SellNewPage() {
     isNegotiable: false,
   })
 
-  const updateForm = (key: string, value: any) => {
+  const updateForm = (key: string, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 

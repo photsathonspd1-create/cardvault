@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -8,6 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+
+interface CatalogListing {
+  id: string
+  customName?: string | null
+  price: number
+  condition: string
+  isGraded?: boolean
+  gradingCompany?: string | null
+  gradeScore?: string | null
+  images?: { url: string }[]
+  seller?: { user?: { name?: string | null } }
+}
 import { TrendingUp, TrendingDown, ShoppingBag, Star, ExternalLink } from "lucide-react"
 import type { Metadata } from "next"
 
@@ -65,13 +77,13 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
   if (!card) notFound()
 
   // Price stats - with safety
-  const prices = (card.listings ?? []).map((l) => l.price).filter(Boolean)
+  const prices = (card.listings ?? []).map((l: { price: number }) => l.price).filter(Boolean)
   const minPrice = prices.length > 0 ? Math.min(...prices) : null
   const maxPrice = prices.length > 0 ? Math.max(...prices) : null
-  const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null
+  const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a: number, b: number) => a + b, 0) / prices.length) : null
 
   // Safe date helper
-  const safeDate = (d: any) => {
+  const safeDate = (d: string | Date | null | undefined) => {
     try { return d ? new Date(d).toLocaleDateString("th-TH") : "-" } catch { return "-" }
   }
 
@@ -227,7 +239,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
             </Card>
           ) : (
             <div className="space-y-3">
-              {card.listings.map((listing) => (
+              {card.listings.map((listing: CatalogListing) => (
                 <Link key={listing.id} href={`/listing/${listing.id}`}>
                   <Card className="hover:border-purple-500/50 transition-all mb-3">
                     <CardContent className="p-3">

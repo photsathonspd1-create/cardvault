@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
@@ -120,7 +120,7 @@ export default async function ForumThreadPage({ params }: ThreadPageProps) {
         </h2>
 
         <div className="space-y-4">
-          {thread.replies.map((reply) => (
+          {thread.replies.map((reply: { id: string; content: string; createdAt: string; isBestAnswer?: boolean; upvoteCount?: number; author?: { name?: string | null; username?: string | null; avatar?: string | null } }) => (
             <Card
               key={reply.id}
               className={reply.isBestAnswer ? "border-green-500/50 bg-green-500/5" : ""}
@@ -128,18 +128,18 @@ export default async function ForumThreadPage({ params }: ThreadPageProps) {
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={reply.author.avatar ?? undefined} />
+                    <AvatarImage src={reply.author?.avatar ?? undefined} />
                     <AvatarFallback className="bg-purple-600/20 text-purple-400 text-xs">
-                      {getInitials(reply.author.name)}
+                      {getInitials(reply.author?.name ?? null)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Link
-                        href={`/profile/${reply.author.username}`}
+                        href={`/profile/${reply.author?.username ?? ""}`}
                         className="font-medium text-sm hover:text-purple-400"
                       >
-                        {reply.author.name}
+                        {reply.author?.name}
                       </Link>
                       {reply.isBestAnswer && (
                         <Badge variant="success" className="text-[10px]">

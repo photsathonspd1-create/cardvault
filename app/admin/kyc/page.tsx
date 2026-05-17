@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 export const dynamic = "force-dynamic"
 
 import { prisma } from "@/lib/prisma"
@@ -169,7 +169,7 @@ export default async function AdminKycPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge variant={KYC_STATUS_COLORS[seller.kycStatus] as any}>{KYC_STATUS_LABELS[seller.kycStatus]}</Badge>
+                      <Badge variant={KYC_STATUS_COLORS[seller.kycStatus] as "default" | "secondary" | "destructive" | "outline"}>{KYC_STATUS_LABELS[seller.kycStatus]}</Badge>
                       {seller.kycReviewedAt && <span className="text-xs text-muted-foreground">{getRelativeTime(seller.kycReviewedAt)}</span>}
                     </div>
                   </div>

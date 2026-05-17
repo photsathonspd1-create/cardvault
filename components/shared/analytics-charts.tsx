@@ -117,7 +117,7 @@ export function AnalyticsCharts({
                     borderRadius: "8px",
                     fontSize: "12px",
                   }}
-                  formatter={(value: any) => [formatPrice(Number(value ?? 0)), "รายได้"]}
+                  formatter={(value: number | string | readonly (string | number)[] | undefined) => [formatPrice(Number(value ?? 0)), "รายได้"]}
                 />
                 <Bar dataKey="revenue" fill="#9355FF" radius={[4, 4, 0, 0]} />
               </BarChart>

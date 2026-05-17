@@ -121,7 +121,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
 
   // Calculate total early for payment step
   const shippingOpt = listing?.shippingOptions?.find(
-    (s: any) => s.provider === form.shippingProvider
+    (s: { provider: string; price: number; name: string }) => s.provider === form.shippingProvider
   )
   const sub = listing?.price ?? 0
   const sFee = shippingOpt?.price ?? 0
@@ -198,7 +198,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   }
 
   const shippingOption = listing.shippingOptions?.find(
-    (s: any) => s.provider === form.shippingProvider
+    (s: { provider: string; price: number; name: string }) => s.provider === form.shippingProvider
   )
   const subtotal = listing.price
   const shippingFee = shippingOption?.price ?? 0

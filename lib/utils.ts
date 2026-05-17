@@ -26,8 +26,8 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, "")
 }
 
-export function getInitials(name: string): string {
-  return name
+export function getInitials(name: string | null | undefined): string {
+  return (name ?? "?")
     .split(" ")
     .map((n) => n[0])
     .join("")

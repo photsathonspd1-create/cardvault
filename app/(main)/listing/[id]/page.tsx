@@ -1,18 +1,18 @@
-// @ts-nocheck
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { formatPrice, SERIES_LABELS, CONDITION_LABELS } from "@/lib/utils"
 import { ListingDetailClient } from "./listing-detail-client"
 
 export const dynamic = "force-dynamic"
 
 interface ListingPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function ListingPage({ params }: ListingPageProps) {
+  const { id } = await params
+
   const listing = await prisma.listing.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       images: { orderBy: { order: "asc" } },
       seller: {
@@ -26,7 +26,6 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
   if (!listing) notFound()
 
-  // Similar listings
   const similarListings = await prisma.listing.findMany({
     where: {
       status: "ACTIVE",
@@ -41,7 +40,6 @@ export default async function ListingPage({ params }: ListingPageProps) {
     orderBy: { createdAt: "desc" },
   })
 
-  // Market price (average of same card)
   const marketAvg = await prisma.listing.aggregate({
     where: {
       status: "ACTIVE",

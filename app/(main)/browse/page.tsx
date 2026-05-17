@@ -23,10 +23,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // Build filter
   const where: Prisma.ListingWhereInput = { status: "ACTIVE" }
   if (params.series) {
-    where.series = params.series
+    where.series = params.series as Prisma.EnumCardSeriesFilter<"Listing">
   }
   if (params.condition) {
-    where.condition = params.condition
+    where.condition = params.condition as Prisma.EnumConditionFilter<"Listing">
   }
   if (params.q) {
     const matchingCards = await prisma.cardCatalog.findMany({

@@ -2,12 +2,48 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Shield, Eye, EyeOff } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { signIn } from "next-auth/react"
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push(callbackUrl)
+        router.refresh()
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLineLogin = () => {
+    signIn("line", { callbackUrl })
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -53,8 +89,17 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-white mb-2">ยินดีต้อนรับกลับมา</h1>
           <p className="text-sm text-zinc-400 mb-8">เข้าสู่ระบบเพื่อซื้อ-ขายการ์ด TCG</p>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
           {/* LINE Login */}
-          <button className="w-full h-12 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors mb-6">
+          <button
+            onClick={handleLineLogin}
+            className="w-full h-12 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors mb-6"
+          >
             <span className="text-lg">💬</span>
             เข้าสู่ระบบด้วย LINE
           </button>
@@ -67,7 +112,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm font-medium text-zinc-300 mb-2 block">อีเมล</label>
               <input
@@ -75,6 +120,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
+                required
                 className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
             </div>
@@ -91,6 +137,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  required
                   className="w-full h-11 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
                 />
                 <button
@@ -102,10 +149,21 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-xl transition-colors">
-              เข้าสู่ระบบ
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังเข้าสู่ระบบ...
+                </>
+              ) : (
+                "เข้าสู่ระบบ"
+              )}
             </button>
-          </div>
+          </form>
 
           <p className="text-center text-sm text-zinc-400 mt-6">
             ยังไม่มีบัญชี?{" "}

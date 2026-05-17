@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -12,6 +13,10 @@ import {
   Menu,
   X,
   ChevronRight,
+  LogOut,
+  User,
+  Package,
+  Store,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,9 +32,12 @@ const NAV_LINKS = [
 
 export function Header() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session, status } = useSession()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -40,6 +48,16 @@ export function Header() {
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/browse?q=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
+
+  const userName = (session?.user as any)?.name || session?.user?.name || "ผู้ใช้"
+  const userInitial = userName.charAt(0).toUpperCase()
 
   return (
     <>
@@ -92,7 +110,7 @@ export function Header() {
             </nav>
 
             {/* Search (desktop) */}
-            <div className="hidden md:flex items-center flex-1 max-w-sm mx-4">
+            <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-sm mx-4">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <input
@@ -103,7 +121,7 @@ export function Header() {
                   className="w-full h-10 pl-10 pr-4 bg-zinc-800/60 border border-zinc-700/50 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all"
                 />
               </div>
-            </div>
+            </form>
 
             {/* Right Actions */}
             <div className="flex items-center gap-2">
@@ -119,29 +137,106 @@ export function Header() {
                 </Button>
               </Link>
 
-              {/* Cart */}
-              <Link href="/orders">
-                <Button variant="ghost" size="icon" className="relative text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg">
-                  <ShoppingCart className="w-5 h-5" />
-                </Button>
-              </Link>
+              {status === "loading" ? (
+                <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse" />
+              ) : session ? (
+                <>
+                  {/* Cart / Orders */}
+                  <Link href="/orders">
+                    <Button variant="ghost" size="icon" className="relative text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg">
+                      <ShoppingCart className="w-5 h-5" />
+                    </Button>
+                  </Link>
 
-              {/* Notifications */}
-              <Link href="/orders">
-                <Button variant="ghost" size="icon" className="relative text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 rounded-full text-[10px] font-bold text-black flex items-center justify-center">
-                    3
-                  </span>
-                </Button>
-              </Link>
+                  {/* Notifications */}
+                  <Link href="/orders">
+                    <Button variant="ghost" size="icon" className="relative text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg">
+                      <Bell className="w-5 h-5" />
+                    </Button>
+                  </Link>
 
-              {/* Avatar */}
-              <Link href="/profile">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-amber-500 flex items-center justify-center text-xs font-bold text-white">
-                  U
-                </div>
-              </Link>
+                  {/* User Menu */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-amber-500 flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-amber-500/50 transition-all"
+                    >
+                      {userInitial}
+                    </button>
+
+                    <AnimatePresence>
+                      {userMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 top-12 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden"
+                          >
+                            <div className="p-3 border-b border-zinc-800">
+                              <p className="text-sm font-medium text-white truncate">{userName}</p>
+                              <p className="text-xs text-zinc-500 truncate">{session.user?.email}</p>
+                            </div>
+                            <div className="p-1">
+                              <Link
+                                href="/profile"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                              >
+                                <User className="w-4 h-4" />
+                                โปรไฟล์
+                              </Link>
+                              <Link
+                                href="/orders"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                              >
+                                <Package className="w-4 h-4" />
+                                ออเดอร์
+                              </Link>
+                              <Link
+                                href="/sell/listings"
+                                onClick={() => setUserMenuOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                              >
+                                <Store className="w-4 h-4" />
+                                รายการขาย
+                              </Link>
+                            </div>
+                            <div className="p-1 border-t border-zinc-800">
+                              <button
+                                onClick={() => {
+                                  setUserMenuOpen(false)
+                                  signOut({ callbackUrl: "/" })
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                              >
+                                <LogOut className="w-4 h-4" />
+                                ออกจากระบบ
+                              </button>
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white text-xs">
+                      เข้าสู่ระบบ
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-lg">
+                      สมัครสมาชิก
+                    </Button>
+                  </Link>
+                </>
+              )}
 
               {/* Mobile Menu Toggle */}
               <Button
@@ -189,14 +284,16 @@ export function Header() {
                 </div>
 
                 {/* Mobile Search */}
-                <div className="relative mb-4">
+                <form onSubmit={handleSearch} className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
                     type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="ค้นหาการ์ด..."
                     className="w-full h-10 pl-10 pr-4 bg-zinc-800 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
                   />
-                </div>
+                </form>
 
                 {NAV_LINKS.map((link) => {
                   const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href.split("?")[0])
@@ -224,6 +321,33 @@ export function Header() {
                       ตรวจสอบผู้ขาย
                     </div>
                   </Link>
+
+                  {session ? (
+                    <>
+                      <Link href="/profile">
+                        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-zinc-300 hover:bg-zinc-800 transition-colors">
+                          <User className="w-4 h-4" />
+                          โปรไฟล์
+                        </div>
+                      </Link>
+                      <button
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        ออกจากระบบ
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex gap-2 mt-2">
+                      <Link href="/login" className="flex-1">
+                        <Button variant="outline" className="w-full text-sm">เข้าสู่ระบบ</Button>
+                      </Link>
+                      <Link href="/register" className="flex-1">
+                        <Button className="w-full bg-amber-500 text-black font-bold text-sm">สมัคร</Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

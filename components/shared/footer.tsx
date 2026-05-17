@@ -27,10 +27,10 @@ const FOOTER_LINKS = {
 }
 
 const SOCIAL_LINKS = [
-  { label: "LINE", href: "#", icon: "💬" },
-  { label: "Facebook", href: "#", icon: "📘" },
-  { label: "Twitter", href: "#", icon: "🐦" },
-  { label: "YouTube", href: "#", icon: "📺" },
+  { label: "LINE", href: "https://line.me/ti/p/~cardvault", icon: "💬" },
+  { label: "Facebook", href: "https://facebook.com/cardvault.th", icon: "📘" },
+  { label: "Twitter", href: "https://twitter.com/cardvault_th", icon: "🐦" },
+  { label: "YouTube", href: "https://youtube.com/@cardvault", icon: "📺" },
 ]
 
 export function Footer() {

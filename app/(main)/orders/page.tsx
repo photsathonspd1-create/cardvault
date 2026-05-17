@@ -1,6 +1,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { redirect } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic"
 export default async function OrdersPage() {
   const session = await auth()
   const userId = (session?.user as { id?: string })?.id
+
+  if (!userId) redirect("/login")
 
   const orders = await prisma.order.findMany({
     where: { buyerId: userId },

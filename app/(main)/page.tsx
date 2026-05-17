@@ -87,19 +87,31 @@ export default async function HomePage() {
               </p>
 
               {/* Search Bar */}
-              <div className="flex max-w-xl mx-auto lg:mx-0">
+              <form
+                action="/browse"
+                method="get"
+                className="flex max-w-xl mx-auto lg:mx-0"
+                onSubmit={(e) => {
+                  const input = e.currentTarget.querySelector("input[name=q]") as HTMLInputElement
+                  if (!input?.value.trim()) e.preventDefault()
+                }}
+              >
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                   <input
+                    name="q"
                     type="text"
                     placeholder="ค้นหาการ์ด, ซีรีส์, ผู้ขาย..."
                     className="w-full h-[52px] pl-12 pr-4 bg-zinc-800 border border-zinc-700 rounded-l-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
                   />
                 </div>
-                <button className="h-[52px] px-6 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-r-xl transition-colors">
+                <button
+                  type="submit"
+                  className="h-[52px] px-6 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-r-xl transition-colors"
+                >
                   ค้นหา
                 </button>
-              </div>
+              </form>
 
               {/* Trending Pills */}
               <div className="flex flex-wrap items-center gap-2 justify-center lg:justify-start">

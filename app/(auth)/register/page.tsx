@@ -2,12 +2,18 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Shield, Eye, EyeOff } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" })
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", confirmPassword: "" })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const passwordStrength = () => {
     const p = form.password
@@ -18,6 +24,71 @@ export default function RegisterPage() {
   }
 
   const strength = passwordStrength()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    if (!form.name || !form.username || !form.email || !form.password) {
+      setError("กรุณากรอกข้อมูลให้ครบทุกช่อง")
+      return
+    }
+    if (form.password.length < 8) {
+      setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("รหัสผ่านไม่ตรงกัน")
+      return
+    }
+    if (!acceptedTerms) {
+      setError("กรุณายอมรับเงื่อนไขการใช้งาน")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          username: form.username,
+          email: form.email,
+          password: form.password,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || "เกิดข้อผิดพลาด")
+        return
+      }
+
+      // Auto login after register
+      const signInResult = await signIn("credentials", {
+        email: form.email,
+        password: form.password,
+        redirect: false,
+      })
+
+      if (signInResult?.error) {
+        router.push("/login")
+      } else {
+        router.push("/")
+        router.refresh()
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLineLogin = () => {
+    signIn("line", { callbackUrl: "/" })
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -63,8 +134,17 @@ export default function RegisterPage() {
           <h1 className="text-2xl font-bold text-white mb-2">สร้างบัญชีใหม่</h1>
           <p className="text-sm text-zinc-400 mb-8">สมัครสมาชิกฟรี เริ่มซื้อขายได้ทันที</p>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
           {/* LINE Login */}
-          <button className="w-full h-12 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors mb-6">
+          <button
+            onClick={handleLineLogin}
+            className="w-full h-12 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors mb-6"
+          >
             <span className="text-lg">💬</span>
             สมัครด้วย LINE
           </button>
@@ -76,7 +156,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm font-medium text-zinc-300 mb-2 block">ชื่อ</label>
               <input
@@ -84,8 +164,24 @@ export default function RegisterPage() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="ชื่อที่ต้องการแสดง"
+                required
                 className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">ชื่อผู้ใช้</label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
+                placeholder="เช่น somchai_cards"
+                required
+                minLength={3}
+                maxLength={20}
+                pattern="[a-z0-9_]+"
+                className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+              />
+              <p className="text-[10px] text-zinc-500 mt-1">a-z, 0-9, _ เท่านั้น</p>
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-300 mb-2 block">อีเมล</label>
@@ -94,6 +190,7 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="your@email.com"
+                required
                 className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
             </div>
@@ -105,6 +202,8 @@ export default function RegisterPage() {
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="อย่างน้อย 8 ตัวอักษร"
+                  required
+                  minLength={8}
                   className="w-full h-11 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
                 />
                 <button
@@ -115,7 +214,6 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {/* Password Strength */}
               {form.password.length > 0 && (
                 <div className="mt-2">
                   <div className="flex gap-1 mb-1">
@@ -140,6 +238,7 @@ export default function RegisterPage() {
                 value={form.confirmPassword}
                 onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                 placeholder="กรอกรหัสผ่านอีกครั้ง"
+                required
                 className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
             </div>
@@ -148,6 +247,8 @@ export default function RegisterPage() {
             <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
                 className="w-4 h-4 mt-0.5 rounded border-zinc-700 bg-zinc-800 text-amber-500 focus:ring-amber-500/20"
               />
               <span className="text-xs text-zinc-400">
@@ -158,10 +259,21 @@ export default function RegisterPage() {
               </span>
             </label>
 
-            <button className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-xl transition-colors">
-              สมัครสมาชิก
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังสมัคร...
+                </>
+              ) : (
+                "สมัครสมาชิก"
+              )}
             </button>
-          </div>
+          </form>
 
           <p className="text-center text-sm text-zinc-400 mt-6">
             มีบัญชีอยู่แล้ว?{" "}

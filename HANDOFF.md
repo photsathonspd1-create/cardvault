@@ -59,6 +59,18 @@ Supabase Project: ruugptsudyxyozywevcu
 | Scammer Check | `app/check/page.tsx` | ✅ Redesigned |
 | Admin Panel | `app/admin/page.tsx` | ✅ Redesigned |
 | Auth (Login + Register) | `app/(auth)/login/page.tsx`, `register/page.tsx` | ✅ Redesigned |
+| How It Works | `app/(main)/how-it-works/page.tsx` | ✅ Redesigned (dark theme) |
+| FAQ | `app/(main)/faq/page.tsx` | ✅ Redesigned (accordion) |
+| Contact | `app/(main)/contact/page.tsx` | ✅ Redesigned (LINE + email) |
+| Escrow Info | `app/(main)/escrow-info/page.tsx` | ✅ Redesigned (buyer/seller protection) |
+| Terms | `app/(main)/terms/page.tsx` | ✅ Redesigned |
+| Privacy | `app/(main)/privacy/page.tsx` | ✅ Redesigned |
+| Checkout | `app/(main)/checkout/[listingId]/page.tsx` | ✅ Fixed types |
+| Seller Listings | `app/sell/listings/page.tsx` | ✅ Already dark theme |
+| Seller Orders | `app/sell/orders/page.tsx` | ✅ Already dark theme |
+| Seller Analytics | `app/sell/analytics/page.tsx` | ✅ Already dark theme |
+| Seller KYC | `app/sell/kyc/page.tsx` | ✅ Already dark theme |
+| Seller Subscription | `app/sell/subscription/page.tsx` | ✅ Already dark theme |
 
 ### ✅ Completed Components
 
@@ -90,8 +102,18 @@ Supabase Project: ruugptsudyxyozywevcu
 
 ## ⚠️ Known Issues / Next Steps
 
-1. **Mock Data:** Seller dashboard, profile, hot-this-week, scammer check use mock data — need real API integration
-3. **Missing Features:**
+### 🔴 Critical — ต้องทำก่อนใช้งานจริง
+1. **Environment Setup:** คัดลอก `.env.example` → `.env.local` แล้วใส่ค่าจริง (DATABASE_URL เป็นอย่างน้อย)
+2. **Database Migration:** `npx prisma db push` หรือ `npx prisma migrate deploy`
+3. **Mock Data → Real API:** Seller dashboard, profile, hot-this-week, scammer check ใช้ mock data
+
+### 🟡 Missing Features
+4. Price history chart (Recharts) on listing detail
+5. Card scanner camera integration (Step 1 of sell wizard)
+6. Payment flow (Omise) on checkout
+7. Chat/messaging between buyer/seller
+8. Watchlist functionality
+9. Notification system
    - Realtime price history chart (Recharts) on listing detail
    - Card scanner camera integration (Step 1 of sell wizard)
    - Payment flow (Omise integration) on checkout

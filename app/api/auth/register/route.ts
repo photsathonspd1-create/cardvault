@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
       }),
       { status: 201, headers: { "Content-Type": "application/json" } }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error)
     return new Response(
-      JSON.stringify({ error: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" }),
+      JSON.stringify({ error: error?.message || "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์", details: error?.code || null }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     )
   }

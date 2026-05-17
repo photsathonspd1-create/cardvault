@@ -90,8 +90,7 @@ Supabase Project: ruugptsudyxyozywevcu
 
 ## ⚠️ Known Issues / Next Steps
 
-1. **`@ts-nocheck` in `app/(main)/page.tsx`** — ต้องลบออกแล้ว fix type errors (ขัดกับ rule "ห้ามใช้ any type")
-2. **Mock Data:** Seller dashboard, profile, hot-this-week, scammer check use mock data — need real API integration
+1. **Mock Data:** Seller dashboard, profile, hot-this-week, scammer check use mock data — need real API integration
 3. **Missing Features:**
    - Realtime price history chart (Recharts) on listing detail
    - Card scanner camera integration (Step 1 of sell wizard)
@@ -139,6 +138,43 @@ Agent ตรวจสอบแล้ว — ทุกไฟล์ใน PHASE B 
 **CSS Utilities ครบ:** `hero-gradient`, `text-gradient`, `glass`, `glow-gold`, `card-hover-effect`, `safe-bottom`
 
 **Next agent:** เริ่มจาก PHASE D (Browse page) หรือ fix `@ts-nocheck` issue ก่อน
+
+---
+
+## ✅ Type Safety Cleanup — Complete (2026-05-17 11:15)
+
+Removed ALL `@ts-nocheck` and `any` types from UI pages and components:
+
+| File | Fix |
+|------|-----|
+| `app/(main)/page.tsx` | ✅ `@ts-nocheck` removed |
+| `app/(main)/browse/page.tsx` | ✅ Proper `Prisma.ListingWhereInput` types |
+| `app/(main)/browse/browse-content.tsx` | ✅ `ListingWithRelations` interface |
+| `app/(main)/listing/[id]/page.tsx` | ✅ `params` as Promise, proper types |
+| `app/(main)/listing/[id]/listing-detail-client.tsx` | ✅ `ListingData` interface |
+| `app/(main)/orders/page.tsx` | ✅ Session user type |
+| `app/(main)/profile/page.tsx` | ✅ Session user type |
+| `app/(main)/card/[catalogId]/page.tsx` | ✅ `CatalogListing` interface |
+| `app/sell/new/page.tsx` | ✅ `string \| number \| boolean` union |
+| `app/sell/orders/page.tsx` | ✅ Session user type |
+| `app/sell/listings/page.tsx` | ✅ Session user type |
+| `app/sell/analytics/page.tsx` | ✅ Proper reduce/map types |
+| `app/admin/layout.tsx` | ✅ `{ role?: string }` type |
+| `app/admin/kyc/page.tsx` | ✅ Badge variant type |
+| `app/admin/disputes/page.tsx` | ✅ `@ts-nocheck` removed |
+| `app/admin/listings/page.tsx` | ✅ `@ts-nocheck` removed |
+| `app/admin/users/page.tsx` | ✅ `@ts-nocheck` removed |
+| `app/community/forum/page.tsx` | ✅ `@ts-nocheck` removed |
+| `app/community/forum/[threadId]/page.tsx` | ✅ Reply type + optional chaining |
+| `app/community/page.tsx` | ✅ Session user type |
+| `app/sitemap.ts` | ✅ `@ts-nocheck` removed |
+| `components/order/escrow-status.tsx` | ✅ `LucideIcon` type, removed invalid variants |
+| `components/shared/seller-badge.tsx` | ✅ Custom className instead of invalid variants |
+| `components/shared/analytics-charts.tsx` | ✅ Recharts formatter type |
+| `components/shared/price-chart.tsx` | ✅ Recharts formatter type |
+| `lib/utils.ts` | ✅ `getInitials` accepts null/undefined |
+
+**tsc --noEmit: 0 errors** (UI pages only, API routes untouched)
 
 ---
 

@@ -16,21 +16,25 @@ const CATEGORIES = [
     series: "POKEMON" as const,
     name: "Pokemon",
     image: "https://images.pokemontcg.io/swsh4/20_hires.png",
+    logo: "🃏",
   },
   {
     series: "YUGIOH" as const,
     name: "Yu-Gi-Oh!",
-    image: "https://images.pokemontcg.io/xy12/1_hires.png",
+    image: "https://images.ygoprodeck.com/images/cards/46986414.jpg",
+    logo: "⚔️",
   },
   {
     series: "MTG" as const,
     name: "Magic: The Gathering",
-    image: "https://images.pokemontcg.io/sm12/1_hires.png",
+    image: "https://cards.scryfall.io/large/front/b/0/b0faa7f2.jpg",
+    logo: "🧙",
   },
   {
     series: "ONE_PIECE" as const,
     name: "One Piece",
-    image: "https://images.pokemontcg.io/swsh11/1_hires.png",
+    image: "https://en.onepiece-cardgame.com/images/cardlist/card/OP01-060.png",
+    logo: "🏴‍☠️",
   },
 ]
 

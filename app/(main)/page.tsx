@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { prisma } from "@/lib/prisma"
-import { formatPrice, SERIES_LABELS, CONDITION_LABELS } from "@/lib/utils"
+import { formatPrice, getRelativeTime, SERIES_LABELS, CONDITION_LABELS } from "@/lib/utils"
 import { Search, ArrowRight, ShieldCheck, Sparkles, RotateCcw } from "lucide-react"
 import { HeroCards } from "@/components/home/hero-cards"
 import { StatsCounter } from "@/components/home/stats-counter"
@@ -11,6 +11,7 @@ import { ScammerCheckBar } from "@/components/home/scammer-check-bar"
 import { CategorySection } from "@/components/home/category-section"
 import { HotThisWeek } from "@/components/home/hot-this-week"
 import { VerifiedSellerSpotlight } from "@/components/home/verified-seller-spotlight"
+import { LiveToast } from "@/components/home/live-toast"
 import { ListingCard } from "@/components/listing/listing-card"
 
 export const dynamic = "force-dynamic"
@@ -22,13 +23,24 @@ export default async function HomePage() {
       images: { take: 1 },
       seller: { include: { user: { select: { name: true, username: true } } } },
     },
-    take: 8,
+    take: 6,
     orderBy: { createdAt: "desc" },
   })
 
-  const totalListings = await prisma.listing.count({ where: { status: "ACTIVE" } })
+  // Real stats from DB
+  const totalCards = await prisma.cardCatalog.count()
   const totalUsers = await prisma.user.count()
-  const totalOrders = await prisma.order.count({ where: { status: "COMPLETED" } })
+  const totalCompletedOrders = await prisma.order.count({ where: { status: "COMPLETED" } })
+
+  // Sum of completed order values
+  let totalSalesValue = 0
+  try {
+    const salesAgg = await prisma.order.aggregate({
+      _sum: { totalAmount: true },
+      where: { status: "COMPLETED" },
+    })
+    totalSalesValue = salesAgg._sum.totalAmount ?? 0
+  } catch { totalSalesValue = 0 }
 
   // Category counts
   const categoryCountsRaw = await prisma.cardCatalog.groupBy({
@@ -47,6 +59,30 @@ export default async function HomePage() {
   try {
     scammerCount = await (prisma as any).scammerReport.count()
   } catch { scammerCount = 0 }
+
+  // Live toast data — latest completed orders
+  let liveToastData: { id: string; cardName: string; amount: string; buyer: string; timeAgo: string }[] = []
+  try {
+    const recentOrders = await prisma.order.findMany({
+      where: { status: "COMPLETED" },
+      orderBy: { completedAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        cardName: true,
+        totalAmount: true,
+        buyer: { select: { name: true } },
+        completedAt: true,
+      },
+    })
+    liveToastData = recentOrders.map((o) => ({
+      id: o.id,
+      cardName: o.cardName,
+      amount: formatPrice(o.totalAmount),
+      buyer: o.buyer?.name ? o.buyer.name.charAt(0) + "***" : "ผู้ซื้อ",
+      timeAgo: o.completedAt ? getRelativeTime(o.completedAt) : "เมื่อสักครู่",
+    }))
+  } catch {}
 
   return (
     <div className="bg-zinc-950">
@@ -146,9 +182,9 @@ export default async function HomePage() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-6 pt-4 max-w-md mx-auto lg:mx-0">
                 <StatsCounter
-                  end={totalListings}
+                  end={totalCards}
                   suffix="+"
-                  label="รายการการ์ด"
+                  label="แค็ตตาล็อกการ์ด"
                   icon={<Sparkles className="w-5 h-5" />}
                 />
                 <StatsCounter
@@ -158,9 +194,9 @@ export default async function HomePage() {
                   icon={<ShieldCheck className="w-5 h-5" />}
                 />
                 <StatsCounter
-                  end={totalOrders > 0 ? Math.min(99, Math.round((totalOrders / Math.max(totalOrders, 1)) * 100)) : 0}
-                  suffix="%"
-                  label="Dispute Resolved"
+                  end={totalCompletedOrders}
+                  suffix="+"
+                  label="ซื้อขายสำเร็จ"
                   icon={<RotateCcw className="w-5 h-5" />}
                 />
               </div>
@@ -213,33 +249,37 @@ export default async function HomePage() {
       {/* ===== VERIFIED SELLER SPOTLIGHT ===== */}
       <VerifiedSellerSpotlight />
 
+      {/* ===== LIVE TOAST ===== */}
+      <LiveToast initialData={liveToastData} />
+
       {/* ===== STATS FOOTER BAR ===== */}
       <section className="w-full bg-zinc-900 border-t border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <StatsCounter
-              end={totalListings}
+              end={totalCards}
               suffix="+"
               label="การ์ดทั้งหมดในระบบ"
               icon={<span className="text-xl">🃏</span>}
             />
             <StatsCounter
-              end={totalOrders}
+              end={totalCompletedOrders}
               suffix="+"
               label="ซื้อขายสำเร็จ"
               icon={<span className="text-xl">✅</span>}
+            />
+            <StatsCounter
+              end={Math.round(totalSalesValue / 100)}
+              suffix=""
+              prefix="฿"
+              label="มูลค่าซื้อขายทั้งหมด"
+              icon={<span className="text-xl">💰</span>}
             />
             <StatsCounter
               end={totalUsers}
               suffix="+"
               label="สมาชิกไว้วางใจ"
               icon={<span className="text-xl">👥</span>}
-            />
-            <StatsCounter
-              end={totalListings}
-              suffix="+"
-              label="รายการขาย"
-              icon={<span className="text-xl">💰</span>}
             />
           </div>
         </div>

@@ -72,14 +72,18 @@ export default async function ListingPage({ params }: ListingPageProps) {
     notFound()
   }
 
-  // Increment view count
-  await prisma.listing.update({
+  // Increment view count (fire-and-forget)
+  prisma.listing.update({
     where: { id: listing.id },
     data: { views: { increment: 1 } },
-  })
+  }).catch(() => {})
 
-  const mainImage = listing.images[0]?.url ?? "/placeholder-card.png"
+  const mainImage = listing.images?.[0]?.url ?? "/placeholder-card.png"
   const seller = listing.seller
+  const sellerUser = seller?.user
+  const sellerName = sellerUser?.name ?? seller?.displayName ?? "ผู้ขาย"
+  const sellerUsername = sellerUser?.username ?? ""
+  const sellerAvatar = sellerUser?.avatar ?? undefined
 
   return (
     <div className="container px-4 py-4 sm:py-8">
@@ -102,9 +106,9 @@ export default async function ListingPage({ params }: ListingPageProps) {
             )}
           </div>
 
-          {listing.images.length > 1 && (
+          {(listing.images?.length ?? 0) > 1 && (
             <div className="grid grid-cols-4 gap-2">
-              {listing.images.map((img, i) => (
+              {listing.images!.map((img, i) => (
                 <div
                   key={img.id}
                   className={`relative aspect-square bg-muted rounded-md overflow-hidden cursor-pointer border-2 ${
@@ -222,7 +226,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
           )}
 
           {/* Shipping */}
-          {listing.shippingOptions.length > 0 && (
+          {(listing.shippingOptions?.length ?? 0) > 0 && (
             <Card>
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -230,7 +234,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
                   ตัวเลือกจัดส่ง
                 </h3>
                 <div className="space-y-2">
-                  {listing.shippingOptions.map((opt) => (
+                  {listing.shippingOptions!.map((opt) => (
                     <div
                       key={opt.id}
                       className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50"
@@ -252,31 +256,36 @@ export default async function ListingPage({ params }: ListingPageProps) {
           )}
 
           {/* Seller Info */}
+          {seller && (
           <Card>
             <CardContent className="p-4">
               <h3 className="font-semibold mb-3">ผู้ขาย</h3>
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
-                  <AvatarImage src={seller.user.avatar ?? undefined} />
+                  <AvatarImage src={sellerAvatar} />
                   <AvatarFallback className="bg-purple-600/20 text-purple-400">
-                    {getInitials(seller.user.name)}
+                    {getInitials(sellerName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/profile/${seller.user.username}`}
-                    className="font-medium hover:text-purple-400 transition-colors truncate block"
-                  >
-                    {seller.displayName}
-                  </Link>
+                  {sellerUsername ? (
+                    <Link
+                      href={`/profile/${sellerUsername}`}
+                      className="font-medium hover:text-purple-400 transition-colors truncate block"
+                    >
+                      {seller.displayName ?? sellerName}
+                    </Link>
+                  ) : (
+                    <span className="font-medium truncate block">{seller.displayName ?? sellerName}</span>
+                  )}
                   <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                    {seller.rating > 0 && (
+                    {(seller.rating ?? 0) > 0 && (
                       <span className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-gold text-gold" />
-                        {seller.rating.toFixed(1)} ({seller.ratingCount})
+                        {(seller.rating ?? 0).toFixed(1)} ({seller.ratingCount ?? 0})
                       </span>
                     )}
-                    <span>{seller.completedOrders} ออเดอร์สำเร็จ</span>
+                    <span>{seller.completedOrders ?? 0} ออเดอร์สำเร็จ</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     {seller.isKycVerified && (
@@ -285,18 +294,21 @@ export default async function ListingPage({ params }: ListingPageProps) {
                       </Badge>
                     )}
                     <Badge variant="gold" className="text-[10px]">
-                      {seller.tier}
+                      {seller.tier ?? "BRONZE"}
                     </Badge>
                   </div>
                 </div>
+                {sellerUsername && (
                 <Button variant="outline" size="sm" asChild className="shrink-0">
-                  <Link href={`/profile/${seller.user.username}`}>
+                  <Link href={`/profile/${sellerUsername}`}>
                     ดูโปรไฟล์
                   </Link>
                 </Button>
+                )}
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Price History Chart */}
           {listing.card && (
@@ -337,65 +349,73 @@ export default async function ListingPage({ params }: ListingPageProps) {
 
 // Price History section (server component to fetch data)
 async function PriceHistorySection({ cardId }: { cardId: string }) {
-  const history = await prisma.priceHistory.findMany({
-    where: { cardId },
-    orderBy: { recordedAt: "asc" },
-    take: 100,
-  })
+  try {
+    const history = await prisma.priceHistory.findMany({
+      where: { cardId },
+      orderBy: { recordedAt: "asc" },
+      take: 100,
+    })
 
-  if (history.length === 0) return null
+    if (history.length === 0) return null
 
-  const data = history.map((h) => ({
-    date: h.recordedAt.toISOString().split("T")[0],
-    price: h.price / 100, // Convert satang to baht for display
-  }))
+    const data = history.map((h) => ({
+      date: h.recordedAt.toISOString().split("T")[0],
+      price: h.price / 100, // Convert satang to baht for display
+    }))
 
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-purple-400" />
-          ประวัติราคา ({history.length} รายการ)
-        </h3>
-        <PriceChart data={data} />
-      </CardContent>
-    </Card>
-  )
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-purple-400" />
+            ประวัติราคา ({history.length} รายการ)
+          </h3>
+          <PriceChart data={data} />
+        </CardContent>
+      </Card>
+    )
+  } catch {
+    return null
+  }
 }
 
 // Similar Listings component
 async function SimilarListingsCard({ listingId, series }: { listingId: string; series: string }) {
-  const similar = await prisma.listing.findMany({
-    where: { id: { not: listingId }, status: "ACTIVE", series: series as any },
-    take: 4,
-    orderBy: { createdAt: "desc" },
-    include: { images: { take: 1 }, seller: { select: { displayName: true, tier: true } } },
-  })
+  try {
+    const similar = await prisma.listing.findMany({
+      where: { id: { not: listingId }, status: "ACTIVE", series: series as any },
+      take: 4,
+      orderBy: { createdAt: "desc" },
+      include: { images: { take: 1 }, seller: { select: { displayName: true, tier: true } } },
+    })
 
-  if (similar.length === 0) return null
+    if (similar.length === 0) return null
 
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <h3 className="font-semibold mb-3">สินค้าที่คล้ายกัน</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {similar.map((item) => (
-            <Link key={item.id} href={`/listing/${item.id}`} className="group">
-              <div className="relative aspect-[3/4] bg-muted rounded-md overflow-hidden mb-2">
-                <Image
-                  src={item.images[0]?.url ?? "/placeholder-card.png"}
-                  alt={item.customName ?? "Card"}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform"
-                  sizes="50vw"
-                />
-              </div>
-              <p className="text-xs font-medium truncate">{item.customName}</p>
-              <p className="text-xs text-gold font-bold">{formatPrice(item.price)}</p>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="font-semibold mb-3">สินค้าที่คล้ายกัน</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {similar.map((item) => (
+              <Link key={item.id} href={`/listing/${item.id}`} className="group">
+                <div className="relative aspect-[3/4] bg-muted rounded-md overflow-hidden mb-2">
+                  <Image
+                    src={item.images?.[0]?.url ?? "/placeholder-card.png"}
+                    alt={item.customName ?? "Card"}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                    sizes="50vw"
+                  />
+                </div>
+                <p className="text-xs font-medium truncate">{item.customName}</p>
+                <p className="text-xs text-gold font-bold">{formatPrice(item.price)}</p>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  } catch {
+    return null
+  }
 }

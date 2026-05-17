@@ -741,6 +741,7 @@ function buildPostgrestFilters(where: Record<string, unknown>): Record<string, s
             } else if (typeof v === "object" && !Array.isArray(v) && !(v instanceof Date)) {
               const ops = v as Record<string, unknown>
               for (const [op, opVal] of Object.entries(ops)) {
+                if (op === "mode") continue // modifier for contains, not a filter
                 if (op === "contains") {
                   const mode = (ops as Record<string, unknown>).mode === "insensitive" ? "ilike" : "like"
                   parts.push(`${k}.${mode}.*${opVal}*`)
@@ -1590,6 +1591,7 @@ function applyWhereClause(
         } else if (typeof val === "object" && !Array.isArray(val) && !(val instanceof Date)) {
           const ops = val as Record<string, unknown>
           for (const [op, opVal] of Object.entries(ops)) {
+            if (op === "mode") continue // modifier for contains, not a filter
             if (op === "contains") {
               const mode = ops.mode === "insensitive" ? "ilike" : "like"
               parts.push(`${key}.${mode}.*${opVal}*`)

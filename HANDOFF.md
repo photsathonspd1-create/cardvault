@@ -1,10 +1,11 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 15:12 GMT+8
+> **Last updated:** 2026-05-17 15:36 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
-> **Live:** https://cardvault-drab.vercel.app/
-> **Latest commit:** `83a9530` (feat: settings page + user profile API)
+> **Live (Netlify):** https://cardvault-tcg.netlify.app
+> **Live (Vercel):** https://cardvault-drab.vercel.app (deploy limit reached, resumes ~2026-05-18)
+> **Latest commit:** `5adff89` (fix: lazy env var initialization for Netlify edge bundling)
 
 ---
 

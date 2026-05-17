@@ -205,3 +205,4 @@ export const {
     },
   },
 })
+// LINE Login configured

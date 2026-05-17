@@ -1,11 +1,11 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 15:36 GMT+8
+> **Last updated:** 2026-05-17 15:55 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
 > **Live (Vercel):** https://cardvault-drab.vercel.app (deploy limit reached, resumes ~2026-05-18)
-> **Latest commit:** `5adff89` (fix: lazy env var initialization for Netlify edge bundling)
+> **Latest commit:** `bb8f895` (fix: add cuid() ID generation for PostgREST create operations)
 
 ---
 
@@ -26,7 +26,7 @@
 | Rate Limit | Upstash Redis (or in-memory fallback) |
 
 ### Key Risk — Prisma Proxy (`lib/prisma.ts`)
-~1100 lines of custom code that translates Prisma queries into Supabase PostgREST calls. This is the #1 fragility point. Known limitations:
+~2200 lines of custom code that translates Prisma queries into Supabase PostgREST calls. This is the #1 fragility point. Known limitations:
 - `$transaction` is NOT a real DB transaction — just sequential calls
 - `$queryRaw` / `$queryRawUnsafe` not implemented (uses Supabase Management API, not configured)
 - Nested `orderBy` inside includes not supported
@@ -55,6 +55,7 @@
 | 13 | PostgREST inserts missing createdAt/updatedAt defaults | Added defaults before insert | `lib/prisma.ts` |
 | 14 | **Profile page crash** — PostgREST returns 1:1 relations (SellerProfile) as arrays | Added `unwrapOneToOneArrays()` to convert single-element arrays to objects; added `processNestedCounts()` for `_count` inside nested includes | `lib/prisma.ts` |
 | 15 | Settings page missing (404) | Created `/settings` page + `GET/PATCH /api/users/me` endpoint | `app/(main)/settings/page.tsx`, `app/api/users/me/route.ts` |
+| 16 | **Register 500 — null ID** — PostgREST doesn't auto-generate `@default(cuid())` IDs | Added `cuid()` generator function; auto-generate IDs in `create()`, `createMany()`, and nested creates | `lib/prisma.ts` |
 
 ### UI Redesign (10 pages done)
 Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)
@@ -67,6 +68,52 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 
 ---
 
+## 🧪 TEST RESULTS (2026-05-17 15:55 GMT+8)
+
+### Pages — All Working ✅
+| Page | Status | Notes |
+|---|---|---|
+| `/` (Homepage) | ✅ 200 | Shows listings, stats, categories |
+| `/browse` | ✅ 200 | Filter/search working |
+| `/login` | ✅ 200 | Credentials + LINE OAuth |
+| `/register` | ✅ 200 | Username + email + password |
+| `/check` (Scammer Check) | ✅ 200 | Search interface |
+| `/community` | ✅ 200 | Posts feed |
+| `/community/forum` | ✅ 200 | Forum threads |
+| `/how-it-works` | ✅ 200 | Static content |
+| `/faq` | ✅ 200 | Static content |
+| `/contact` | ✅ 200 | Static content |
+| `/terms` | ✅ 200 | Static content |
+| `/privacy` | ✅ 200 | Static content |
+| `/escrow-info` | ✅ 200 | Static content |
+| `/forgot-password` | ✅ 200 | Password reset form |
+| `/reset-password` | ✅ 200 | Password reset form |
+| `/settings` | ✅ 200 | User settings (auth required) |
+| `/profile` | ✅ 200 | User profile (auth required) |
+| `/orders` | ✅ 200 | Orders list (auth required) |
+| `/sell` | ✅ 307 | Redirects to login (auth required) |
+| `/admin` | ✅ 307 | Redirects to login (auth required) |
+| `/listing/[id]` | ✅ 200 | Listing detail |
+| `/card/[catalogId]` | ✅ 200 | Card catalog detail |
+| `/checkout/[listingId]` | ✅ 200 | Checkout page |
+| `/sitemap.xml` | ✅ 200 | SEO sitemap |
+| `/robots.txt` | ✅ 200 | SEO robots |
+
+### APIs — All Working ✅
+| Endpoint | Status | Notes |
+|---|---|---|
+| `POST /api/auth/register` | ✅ 201 | Creates user with auto-generated cuid() |
+| `GET /api/listings` | ✅ 200 | Returns 12 seed listings |
+| `GET /api/listings/[id]` | ✅ 200 | Full listing with seller, images, shipping |
+| `GET /api/cards/[id]/price-history` | ✅ 200 | Returns empty array (no history data yet) |
+| `GET /api/users/me` | ✅ 401 | Correctly requires auth |
+| `GET /api/community/posts` | ✅ 401 | Correctly requires auth |
+| `GET /api/forum/threads` | ✅ 401 | Correctly requires auth |
+| `POST /api/reports/scammer` | ✅ 401 | Correctly requires auth |
+| `POST /api/cards/identify` | ✅ 401 | Correctly requires auth |
+
+---
+
 ## 🔴 NOT YET DONE / NEEDS WORK
 
 ### Priority 1 — Critical for Launch
@@ -76,17 +123,17 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | 2 | **Cloudflare R2 Storage** | ❌ Not configured | Need `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`. Code ready in `lib/r2.ts` |
 | 3 | **Resend Email** | ❌ Not configured | Need `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. Templates ready in `lib/resend.ts` |
 | 4 | **CRON_SECRET** | ❌ Not set | Generate: `openssl rand -hex 32`. Escrow auto-release needs this |
-| 5 | **Seed Data** | ⚠️ Unknown | May need `npx prisma db seed` against live Supabase. Check if users exist |
-| 6 | **Login Flow** | ⚠️ Untested | Uses `prisma.user.findUnique({ where: { email } })` — should work with proxy but unverified |
+| 5 | **Login Flow E2E Test** | ⚠️ Untested | Uses `prisma.user.findUnique({ where: { email } })` — should work with proxy but unverified with actual login |
 
 ### Priority 2 — Important Features
 | # | Task | Status | Notes |
 |---|---|---|---|
-| 7 | **Card Scanner Camera Integration** | 🔧 Partial | Tesseract.js integrated but camera UI needs work |
-| 8 | **Price History Charts** | 🔧 Partial | Recharts installed, `PriceChart` component exists, needs real data |
-| 9 | **Browse Search** | ⚠️ Needs verify | Uses `OR` + `contains` + `mode: "insensitive"` — proxy compatibility unknown |
-| 10 | **Community/Forum** | ❌ Empty | Pages load but no seed data |
-| 11 | **Image Domains** | ❌ Not configured | `next.config.js` needs `images.remotePatterns` for external URLs |
+| 6 | **Card Scanner Camera Integration** | 🔧 Partial | Tesseract.js integrated but camera UI needs work |
+| 7 | **Price History Charts** | 🔧 Partial | Recharts installed, `PriceChart` component exists, needs real data |
+| 8 | **Browse Search** | ⚠️ Needs verify | Uses `OR` + `contains` + `mode: "insensitive"` — proxy compatibility unknown |
+| 9 | **Community/Forum Seed Data** | ❌ Empty | Pages load but no seed data |
+| 10 | **Image Domains** | ❌ Not configured | `next.config.js` needs `images.remotePatterns` for external URLs |
+| 11 | **Remaining pages redesign** | ❌ Not done | checkout, orders list, analytics, subscription, KYC, community, how-it-works, FAQ, contact, escrow-info, terms, privacy |
 
 ### Priority 3 — Nice to Have
 | # | Task | Status | Notes |
@@ -94,19 +141,19 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | 12 | Chat/Messaging | ❌ Not built | No implementation yet |
 | 13 | Watchlist | ❌ Not built | No implementation yet |
 | 14 | Notifications | ❌ Not built | `services/notification.service.ts` exists but UI not built |
-| 15 | Remaining pages redesign | ❌ Not done | checkout, orders list, analytics, subscription, KYC, community, how-it-works, FAQ, contact, escrow-info, terms, privacy |
-| 16 | LINE OAuth | ⚠️ Env set but untested | `LINE_CLIENT_ID` and `LINE_CLIENT_SECRET` may be set in Vercel |
+| 15 | LINE OAuth | ⚠️ Env set but untested | `LINE_CLIENT_ID` and `LINE_CLIENT_SECRET` may be set in Vercel |
 
 ---
 
 ## 🔧 ENV VARS STATUS
 
-### ✅ Should be set (verify in Vercel dashboard)
+### ✅ Set in Netlify
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://ruugptsudyxyozywevcu.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<in Vercel env vars>
-NEXTAUTH_SECRET=<random string>
-NEXTAUTH_URL=https://cardvault-drab.vercel.app
+SUPABASE_SERVICE_ROLE_KEY=<set>
+NEXTAUTH_SECRET=<set>
+NEXTAUTH_URL=https://cardvault-tcg.netlify.app
+NEXT_PUBLIC_APP_URL=https://cardvault-tcg.netlify.app
 ```
 
 ### ❌ TODO — Not set
@@ -141,7 +188,7 @@ POKEMON_TCG_API_KEY=...
 ## 📁 Key Files Reference
 
 ```
-lib/prisma.ts              — Custom Prisma→PostgREST proxy (⚠️ 1100 lines, fragile)
+lib/prisma.ts              — Custom Prisma→PostgREST proxy (~2200 lines, fragile)
 lib/supabase-client.ts     — Supabase admin client
 lib/auth.ts                — NextAuth config (Credentials + LINE OAuth)
 lib/omise.ts               — Payment client (ready for keys)
@@ -177,6 +224,9 @@ git pull origin main
 npm run build
 # 3. Commit & push (auto-deploys to Vercel)
 git add -A && git commit -m "feat: description" && git push origin main
+# 4. Deploy to Netlify (manual — use env vars)
+NETLIFY_AUTH_TOKEN=<token> NETLIFY_SITE_ID=8dcb5718-5634-4c41-939b-7d229bca2aab \
+netlify deploy --prod --dir=.next
 ```
 
 ### Critical Rules
@@ -187,13 +237,15 @@ git add -A && git commit -m "feat: description" && git push origin main
 5. Mobile responsive (375px + 1440px)
 6. Use `next/image` for all images
 
-### Credentials (ask human or check Vercel dashboard)
+### Credentials (ask human or check dashboards)
 ```
-GitHub PAT:       <ask human>
-Vercel Token:     <ask human>
+GitHub PAT:       <ask human or check env>
+Netlify Token:    <ask human or check env>
+Netlify Site ID:  8dcb5718-5634-4c41-939b-7d229bca2aab
+Vercel Token:     <ask human or check env>
 Vercel Project:   prj_FoW9G9bBDARIEK573IjP1ZDYwAZU
 Supabase URL:     https://ruugptsudyxyozywevcu.supabase.co
-Supabase Key:     <in Vercel env vars>
+Supabase Key:     <in env vars>
 Supabase Project: ruugptsudyxyozywevcu
 ```
 
@@ -205,13 +257,16 @@ Supabase Project: ruugptsudyxyozywevcu
 2. **No real transactions** — order creation could leave inconsistent state
 3. **Supabase RLS bypassed** — service role key gives full DB access server-side
 4. **Tesseract OCR** — may not work well for Thai text on cards
-5. **No error monitoring** — no Sentry/LogRocket, errors only visible in Vercel function logs
+5. **No error monitoring** — no Sentry/LogRocket, errors only visible in Vercel/Netlify function logs
 
 ---
 
 ## 📊 Commit History (recent)
 
 ```
+bb8f895 fix: add cuid() ID generation for PostgREST create operations
+eb33e10 docs: detailed agent prompt with full architecture, debugging guide, and testing commands
+5adff89 fix: lazy env var initialization for Netlify edge bundling
 414495a debug: add detailed error to register route
 0d7eba4 fix: add createdAt/updatedAt defaults for PostgREST inserts
 5c17077 docs: add comprehensive handoff document for multi-agent continuity

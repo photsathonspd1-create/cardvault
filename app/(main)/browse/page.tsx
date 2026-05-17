@@ -1,58 +1,58 @@
-// @ts-nocheck
 import { Suspense } from "react"
 import { prisma } from "@/lib/prisma"
 import { BrowseContent } from "./browse-content"
+import type { Prisma } from "@prisma/client"
 
 export const dynamic = "force-dynamic"
 
 interface BrowsePageProps {
-  searchParams: {
+  searchParams: Promise<{
     series?: string
     condition?: string
     sort?: string
     q?: string
     page?: string
-  }
+  }>
 }
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
-  const page = Number(searchParams.page) || 1
+  const params = await searchParams
+  const page = Number(params.page) || 1
   const pageSize = 20
 
   // Build filter
-  const where: any = { status: "ACTIVE" }
-  if (searchParams.series) {
-    where.series = searchParams.series
+  const where: Prisma.ListingWhereInput = { status: "ACTIVE" }
+  if (params.series) {
+    where.series = params.series
   }
-  if (searchParams.condition) {
-    where.condition = searchParams.condition
+  if (params.condition) {
+    where.condition = params.condition
   }
-  if (searchParams.q) {
-    // Search in customName and card names
+  if (params.q) {
     const matchingCards = await prisma.cardCatalog.findMany({
-      where: { name: { contains: searchParams.q, mode: "insensitive" } },
+      where: { name: { contains: params.q, mode: "insensitive" } },
       select: { id: true },
       take: 50,
     })
-    const cardIds = matchingCards.map((c: any) => c.id)
+    const cardIds = matchingCards.map((c) => c.id)
 
     if (cardIds.length > 0) {
       where.OR = [
-        { customName: { contains: searchParams.q, mode: "insensitive" } },
+        { customName: { contains: params.q, mode: "insensitive" } },
         { cardId: { in: cardIds } },
       ]
     } else {
       where.OR = [
-        { customName: { contains: searchParams.q, mode: "insensitive" } },
+        { customName: { contains: params.q, mode: "insensitive" } },
       ]
     }
   }
 
   // Sort
-  let orderBy: any = { createdAt: "desc" }
-  if (searchParams.sort === "price_asc") orderBy = { price: "asc" }
-  if (searchParams.sort === "price_desc") orderBy = { price: "desc" }
-  if (searchParams.sort === "popular") orderBy = { views: "desc" }
+  let orderBy: Prisma.ListingOrderByWithRelationInput = { createdAt: "desc" }
+  if (params.sort === "price_asc") orderBy = { price: "asc" }
+  if (params.sort === "price_desc") orderBy = { price: "desc" }
+  if (params.sort === "popular") orderBy = { views: "desc" }
 
   const [listings, total] = await Promise.all([
     prisma.listing.findMany({
@@ -77,7 +77,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         total={total}
         page={page}
         totalPages={totalPages}
-        searchParams={searchParams}
+        searchParams={params}
       />
     </Suspense>
   )

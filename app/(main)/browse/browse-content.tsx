@@ -8,8 +8,24 @@ import { FilterSidebar } from "@/components/browse/filter-sidebar"
 import { ListingCard } from "@/components/listing/listing-card"
 import { cn } from "@/lib/utils"
 
+interface ListingWithRelations {
+  id: string
+  customName?: string | null
+  price: number
+  condition: string
+  series: string
+  isGraded?: boolean
+  gradingCompany?: string | null
+  gradeScore?: string | null
+  images?: { url: string }[]
+  seller?: {
+    tier?: string
+    user?: { name?: string | null; username?: string | null }
+  }
+}
+
 interface BrowseContentProps {
-  listings: any[]
+  listings: ListingWithRelations[]
   total: number
   page: number
   totalPages: number
@@ -29,7 +45,10 @@ export function BrowseContent({ listings, total, page, totalPages, searchParams 
   const [viewMode, setViewMode] = useState<"grid4" | "grid2" | "list">("grid4")
 
   const updateSort = (sort: string) => {
-    const params = new URLSearchParams(searchParams as any)
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined) params.set(key, value)
+    }
     params.set("sort", sort)
     params.delete("page")
     router.push(`/browse?${params.toString()}`)
@@ -149,48 +168,63 @@ export function BrowseContent({ listings, total, page, totalPages, searchParams 
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-8">
-              <Link
-                href={`/browse?${new URLSearchParams({ ...searchParams as any, page: String(page - 1) }).toString()}`}
-                className={cn(
-                  "w-9 h-9 rounded-lg flex items-center justify-center border transition-colors",
-                  page <= 1
-                    ? "border-zinc-800 text-zinc-600 pointer-events-none"
-                    : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
-                )}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Link>
+              {(() => {
+                const makePageParams = (p: number) => {
+                  const params = new URLSearchParams()
+                  for (const [key, value] of Object.entries(searchParams)) {
+                    if (value !== undefined && key !== "page") params.set(key, value)
+                  }
+                  params.set("page", String(p))
+                  return params.toString()
+                }
 
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4)) + i
-                if (pageNum > totalPages) return null
                 return (
-                  <Link
-                    key={pageNum}
-                    href={`/browse?${new URLSearchParams({ ...searchParams as any, page: String(pageNum) }).toString()}`}
-                    className={cn(
-                      "w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium transition-colors",
-                      pageNum === page
-                        ? "bg-amber-500 text-black"
-                        : "border border-zinc-700 text-zinc-400 hover:bg-zinc-800"
-                    )}
-                  >
-                    {pageNum}
-                  </Link>
-                )
-              })}
+                  <>
+                    <Link
+                      href={`/browse?${makePageParams(page - 1)}`}
+                      className={cn(
+                        "w-9 h-9 rounded-lg flex items-center justify-center border transition-colors",
+                        page <= 1
+                          ? "border-zinc-800 text-zinc-600 pointer-events-none"
+                          : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                      )}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Link>
 
-              <Link
-                href={`/browse?${new URLSearchParams({ ...searchParams as any, page: String(page + 1) }).toString()}`}
-                className={cn(
-                  "w-9 h-9 rounded-lg flex items-center justify-center border transition-colors",
-                  page >= totalPages
-                    ? "border-zinc-800 text-zinc-600 pointer-events-none"
-                    : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
-                )}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Link>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4)) + i
+                      if (pageNum > totalPages) return null
+                      return (
+                        <Link
+                          key={pageNum}
+                          href={`/browse?${makePageParams(pageNum)}`}
+                          className={cn(
+                            "w-9 h-9 rounded-lg flex items-center justify-center text-sm font-medium transition-colors",
+                            pageNum === page
+                              ? "bg-amber-500 text-black"
+                              : "border border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                          )}
+                        >
+                          {pageNum}
+                        </Link>
+                      )
+                    })}
+
+                    <Link
+                      href={`/browse?${makePageParams(page + 1)}`}
+                      className={cn(
+                        "w-9 h-9 rounded-lg flex items-center justify-center border transition-colors",
+                        page >= totalPages
+                          ? "border-zinc-800 text-zinc-600 pointer-events-none"
+                          : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                      )}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </>
+                )
+              })()}
             </div>
           )}
         </div>

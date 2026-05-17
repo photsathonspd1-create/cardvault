@@ -1,235 +1,176 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, Mail, Lock, User, AtSign, AlertCircle, CheckCircle } from "lucide-react"
+import { Shield, Eye, EyeOff } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const [showPassword, setShowPassword] = useState(false)
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" })
 
-  const [form, setForm] = useState({
-    name: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    agreeTerms: false,
-  })
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-
-  function updateForm(field: string, value: any) {
-    setForm((prev) => ({ ...prev, [field]: value }))
+  const passwordStrength = () => {
+    const p = form.password
+    if (p.length === 0) return { level: 0, label: "", color: "" }
+    if (p.length < 6) return { level: 1, label: "อ่อน", color: "bg-red-500" }
+    if (p.length < 10 || !/[A-Z]/.test(p)) return { level: 2, label: "ปานกลาง", color: "bg-orange-500" }
+    return { level: 3, label: "แข็งแรง", color: "bg-green-500" }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-
-    if (form.password !== form.confirmPassword) {
-      setError("รหัสผ่านไม่ตรงกัน")
-      return
-    }
-
-    if (form.password.length < 8) {
-      setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
-      return
-    }
-
-    if (!form.agreeTerms) {
-      setError("กรุณายอมรับข้อกำหนดการใช้งาน")
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          username: form.username,
-          email: form.email,
-          password: form.password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error ?? "เกิดข้อผิดพลาด")
-        return
-      }
-
-      router.push("/login?registered=true")
-    } catch (err) {
-      setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
-    } finally {
-      setLoading(false)
-    }
-  }
+  const strength = passwordStrength()
 
   return (
-    <Card className="border-border/50 bg-card/80 backdrop-blur">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">สมัครสมาชิก</CardTitle>
-        <CardDescription className="text-center">
-          สร้างบัญชี CardVault เพื่อเริ่มซื้อ-ขายการ์ด
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
+    <div className="min-h-screen flex">
+      {/* Left — Visual */}
+      <div className="hidden lg:flex w-1/2 bg-zinc-900 relative overflow-hidden items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-amber-500/10" />
+        <div className="relative z-10 text-center px-12">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+              <Shield className="w-7 h-7 text-black" />
             </div>
-          )}
+            <span className="text-3xl font-bold text-white">CardVault</span>
+          </div>
+          <p className="text-zinc-400 text-lg mb-8">
+            เริ่มต้นซื้อ-ขายการ์ด TCG วันนี้
+          </p>
+          <div className="space-y-4 text-left max-w-sm mx-auto">
+            {[
+              { icon: "🆓", text: "สมัครฟรี ไม่มีค่าใช้จ่าย" },
+              { icon: "🛡️", text: "ระบบ Escrow คุ้มครองทุกธุรกรรม" },
+              { icon: "📈", text: "เข้าถึงตลาดการ์ด TCG ทั่วไทย" },
+            ].map((item) => (
+              <div key={item.text} className="flex items-center gap-3 px-4 py-3 bg-zinc-800/50 rounded-xl">
+                <span className="text-lg">{item.icon}</span>
+                <span className="text-sm text-zinc-300">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">ชื่อ-นามสกุล</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="name"
-                placeholder="ชื่อ นามสกุล"
+      {/* Right — Form */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-zinc-950">
+        <div className="w-full max-w-sm">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-black" />
+            </div>
+            <span className="text-lg font-bold text-white">CardVault</span>
+          </div>
+
+          <h1 className="text-2xl font-bold text-white mb-2">สร้างบัญชีใหม่</h1>
+          <p className="text-sm text-zinc-400 mb-8">สมัครสมาชิกฟรี เริ่มซื้อขายได้ทันที</p>
+
+          {/* LINE Login */}
+          <button className="w-full h-12 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors mb-6">
+            <span className="text-lg">💬</span>
+            สมัครด้วย LINE
+          </button>
+
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-zinc-800" />
+            <span className="text-xs text-zinc-500">— หรือ —</span>
+            <div className="flex-1 h-px bg-zinc-800" />
+          </div>
+
+          {/* Form */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">ชื่อ</label>
+              <input
+                type="text"
                 value={form.name}
-                onChange={(e) => updateForm("name", e.target.value)}
-                className="pl-10"
-                required
-                disabled={loading}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="ชื่อที่ต้องการแสดง"
+                className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="username">ชื่อผู้ใช้</Label>
-            <div className="relative">
-              <AtSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="username"
-                placeholder="username"
-                value={form.username}
-                onChange={(e) => updateForm("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
-                className="pl-10"
-                required
-                disabled={loading}
-                minLength={3}
-                maxLength={20}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">a-z, 0-9, _ เท่านั้น (3-20 ตัวอักษร)</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">อีเมล</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="email"
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">อีเมล</label>
+              <input
                 type="email"
-                placeholder="your@email.com"
                 value={form.email}
-                onChange={(e) => updateForm("email", e.target.value)}
-                className="pl-10"
-                required
-                disabled={loading}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="your@email.com"
+                className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">รหัสผ่าน</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                placeholder="อย่างน้อย 8 ตัวอักษร"
-                value={form.password}
-                onChange={(e) => updateForm("password", e.target.value)}
-                className="pl-10"
-                required
-                disabled={loading}
-                minLength={8}
-              />
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">รหัสผ่าน</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="อย่างน้อย 8 ตัวอักษร"
+                  className="w-full h-11 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {/* Password Strength */}
+              {form.password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex gap-1 mb-1">
+                    {[1, 2, 3].map((l) => (
+                      <div
+                        key={l}
+                        className={cn(
+                          "h-1 flex-1 rounded-full transition-colors",
+                          strength.level >= l ? strength.color : "bg-zinc-800"
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-zinc-500">{strength.label}</span>
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="confirmPassword"
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">ยืนยันรหัสผ่าน</label>
+              <input
                 type="password"
-                placeholder="กรอกรหัสผ่านอีกครั้ง"
                 value={form.confirmPassword}
-                onChange={(e) => updateForm("confirmPassword", e.target.value)}
-                className="pl-10"
-                required
-                disabled={loading}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                placeholder="กรอกรหัสผ่านอีกครั้ง"
+                className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
               />
             </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="terms"
-              checked={form.agreeTerms}
-              onCheckedChange={(checked) => updateForm("agreeTerms", checked)}
-            />
-            <label
-              htmlFor="terms"
-              className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              ฉันยอมรับ{" "}
-              <Link href="/terms" className="text-purple-400 hover:text-purple-300">
-                ข้อกำหนดการใช้งาน
-              </Link>{" "}
-              และ{" "}
-              <Link href="/privacy" className="text-purple-400 hover:text-purple-300">
-                นโยบายความเป็นส่วนตัว
-              </Link>
+            {/* Terms */}
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 mt-0.5 rounded border-zinc-700 bg-zinc-800 text-amber-500 focus:ring-amber-500/20"
+              />
+              <span className="text-xs text-zinc-400">
+                ยอมรับ{" "}
+                <Link href="/terms" className="text-amber-400 hover:underline">เงื่อนไขการใช้งาน</Link>
+                {" "}และ{" "}
+                <Link href="/privacy" className="text-amber-400 hover:underline">นโยบายความเป็นส่วนตัว</Link>
+              </span>
             </label>
+
+            <button className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-xl transition-colors">
+              สมัครสมาชิก
+            </button>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            variant="gold"
-            size="lg"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                กำลังสมัครสมาชิก...
-              </>
-            ) : (
-              <>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                สมัครสมาชิก
-              </>
-            )}
-          </Button>
-        </form>
-      </CardContent>
-      <CardFooter>
-        <p className="text-sm text-center text-muted-foreground w-full">
-          มีบัญชีอยู่แล้ว?{" "}
-          <Link href="/login" className="text-purple-400 hover:text-purple-300 font-medium">
-            เข้าสู่ระบบ
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
+          <p className="text-center text-sm text-zinc-400 mt-6">
+            มีบัญชีอยู่แล้ว?{" "}
+            <Link href="/login" className="text-amber-400 hover:text-amber-300 font-medium">
+              เข้าสู่ระบบ →
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }

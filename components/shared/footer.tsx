@@ -1,101 +1,138 @@
 import Link from "next/link"
-import { Separator } from "@/components/ui/separator"
+import { Shield } from "lucide-react"
+
+const FOOTER_LINKS = {
+  marketplace: [
+    { label: "ซื้อการ์ด", href: "/browse" },
+    { label: "ลงขายการ์ด", href: "/sell/new" },
+    { label: "ซีรีส์การ์ด", href: "/browse" },
+    { label: "การ์ดยอดนิยม", href: "/browse?sort=popular" },
+    { label: "ลงขายล่าสุด", href: "/browse?sort=newest" },
+  ],
+  sellers: [
+    { label: "เริ่มขายการ์ด", href: "/sell/new" },
+    { label: "Seller Dashboard", href: "/sell" },
+    { label: "คำแนะนำสำหรับผู้ขาย", href: "/how-it-works" },
+    { label: "ระบบ Escrow", href: "/escrow-info" },
+    { label: "อัปเกรดเป็น PRO", href: "/sell/subscription" },
+  ],
+  help: [
+    { label: "วิธีการใช้งาน", href: "/how-it-works" },
+    { label: "ตรวจสอบผู้ขาย", href: "/check" },
+    { label: "คำถามที่พบบ่อย", href: "/faq" },
+    { label: "ติดต่อเรา", href: "/contact" },
+    { label: "เงื่อนไขการใช้งาน", href: "/terms" },
+    { label: "นโยบายความเป็นส่วนตัว", href: "/privacy" },
+  ],
+}
+
+const SOCIAL_LINKS = [
+  { label: "LINE", href: "#", icon: "💬" },
+  { label: "Facebook", href: "#", icon: "📘" },
+  { label: "Twitter", href: "#", icon: "🐦" },
+  { label: "YouTube", href: "#", icon: "📺" },
+]
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/40 bg-background">
-      <div className="container px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-600 to-gold flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CV</span>
+    <footer className="bg-zinc-950 border-t border-zinc-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+          {/* Brand Column */}
+          <div className="col-span-2 md:col-span-1">
+            <Link href="/" className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-black" />
               </div>
-              <span className="font-bold text-xl">
-                <span className="text-purple-400">Card</span>
-                <span className="text-gold">Vault</span>
-              </span>
+              <span className="text-lg font-bold text-white">CardVault</span>
             </Link>
-            <p className="text-sm text-muted-foreground">
-              Marketplace ซื้อ-ขายการ์ด TCG ที่ใหญ่ที่สุดในประเทศไทย
+            <p className="text-sm text-zinc-400 mb-4 max-w-xs">
+              ตลาดซื้อ-ขายการ์ด TCG ที่ใหญ่ที่สุดในประเทศไทย
               ปลอดภัยด้วยระบบ Escrow
             </p>
+            <div className="flex gap-3">
+              {SOCIAL_LINKS.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  className="w-9 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-sm transition-colors"
+                  aria-label={social.label}
+                >
+                  {social.icon}
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Marketplace */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">Marketplace</h4>
-            <nav className="flex flex-col gap-2">
-              <Link href="/browse" className="text-sm text-muted-foreground hover:text-foreground">
-                ค้นหาการ์ด
-              </Link>
-              <Link href="/browse?series=POKEMON" className="text-sm text-muted-foreground hover:text-foreground">
-                Pokemon
-              </Link>
-              <Link href="/browse?series=YUGIOH" className="text-sm text-muted-foreground hover:text-foreground">
-                Yu-Gi-Oh!
-              </Link>
-              <Link href="/browse?series=MTG" className="text-sm text-muted-foreground hover:text-foreground">
-                Magic: The Gathering
-              </Link>
-              <Link href="/browse?series=ONE_PIECE" className="text-sm text-muted-foreground hover:text-foreground">
-                One Piece
-              </Link>
-            </nav>
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-4">Marketplace</h3>
+            <ul className="space-y-2.5">
+              {FOOTER_LINKS.marketplace.map((link) => (
+                <li key={link.href + link.label}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-zinc-400 hover:text-amber-400 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Seller */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">สำหรับผู้ขาย</h4>
-            <nav className="flex flex-col gap-2">
-              <Link href="/sell" className="text-sm text-muted-foreground hover:text-foreground">
-                เริ่มขาย
-              </Link>
-              <Link href="/sell/new" className="text-sm text-muted-foreground hover:text-foreground">
-                ลงขายสินค้า
-              </Link>
-              <Link href="/sell/listings" className="text-sm text-muted-foreground hover:text-foreground">
-                รายการขาย
-              </Link>
-              <Link href="/sell/orders" className="text-sm text-muted-foreground hover:text-foreground">
-                ออเดอร์
-              </Link>
-            </nav>
+          {/* For Sellers */}
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-4">สำหรับผู้ขาย</h3>
+            <ul className="space-y-2.5">
+              {FOOTER_LINKS.sellers.map((link) => (
+                <li key={link.href + link.label}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-zinc-400 hover:text-amber-400 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Support */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm">ช่วยเหลือ</h4>
-            <nav className="flex flex-col gap-2">
-              <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground">
-                คำถามที่พบบ่อย
-              </Link>
-              <Link href="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground">
-                วิธีใช้งาน
-              </Link>
-              <Link href="/escrow-info" className="text-sm text-muted-foreground hover:text-foreground">
-                ระบบ Escrow
-              </Link>
-              <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground">
-                ติดต่อเรา
-              </Link>
-            </nav>
+          {/* Help */}
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-4">ช่วยเหลือ</h3>
+            <ul className="space-y-2.5">
+              {FOOTER_LINKS.help.map((link) => (
+                <li key={link.href + link.label}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-zinc-400 hover:text-amber-400 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
-        <Separator className="my-8" />
-
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} CardVault Thailand. สงวนลิขสิทธิ์
+        {/* Bottom Bar */}
+        <div className="pt-6 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-zinc-500">
+            CardVault © {new Date().getFullYear()}
           </p>
-          <div className="flex gap-4">
-            <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
-              ข้อกำหนดการใช้งาน
+          <div className="flex flex-wrap justify-center gap-4 text-xs text-zinc-500">
+            <Link href="/how-it-works" className="hover:text-zinc-300 transition-colors">
+              เกี่ยวกับเรา
             </Link>
-            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href="/terms" className="hover:text-zinc-300 transition-colors">
+              เงื่อนไขการใช้งาน
+            </Link>
+            <Link href="/privacy" className="hover:text-zinc-300 transition-colors">
               นโยบายความเป็นส่วนตัว
+            </Link>
+            <Link href="/contact" className="hover:text-zinc-300 transition-colors">
+              ติดต่อเรา
             </Link>
           </div>
         </div>

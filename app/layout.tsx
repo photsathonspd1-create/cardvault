@@ -1,17 +1,19 @@
 import type { Metadata } from "next"
-import { Inter, Noto_Sans_Thai } from "next/font/google"
+import { Inter, Sarabun } from "next/font/google"
 import { Providers } from "@/components/shared/providers"
 import "./globals.css"
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
 })
 
-const notoSansThai = Noto_Sans_Thai({
+const sarabun = Sarabun({
   subsets: ["thai"],
-  variable: "--font-noto-thai",
-  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-sarabun",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -83,7 +85,7 @@ export default function RootLayout({
   return (
     <html lang="th" className="dark">
       <body
-        className={`${inter.variable} ${notoSansThai.variable} font-sans antialiased`}
+        className={`${inter.variable} ${sarabun.variable} font-sans antialiased bg-zinc-950 text-zinc-50`}
       >
         <Providers>{children}</Providers>
       </body>

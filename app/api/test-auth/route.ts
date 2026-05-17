@@ -1,12 +1,26 @@
 // @ts-nocheck
 import { NextResponse } from "next/server"
+import { handlers } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // Test if auth module can be loaded
-    const authModule = await import("@/lib/auth")
-    return NextResponse.json({ ok: true, exports: Object.keys(authModule) })
+    // Try calling the NextAuth CSRF handler directly
+    const csrfReq = new Request("https://cardvault-tcg.netlify.app/api/auth/csrf", {
+      method: "GET",
+      headers: req.headers,
+    })
+    const response = await handlers.GET(csrfReq)
+    const body = await response.text()
+    return NextResponse.json({
+      status: response.status,
+      body: body.substring(0, 500),
+      headers: Object.fromEntries(response.headers.entries()),
+    })
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message, stack: err?.stack?.split("\n").slice(0, 5) })
+    return NextResponse.json({
+      error: err?.message,
+      name: err?.name,
+      stack: err?.stack?.split("\n").slice(0, 10),
+    })
   }
 }

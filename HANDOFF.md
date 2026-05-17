@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 17:52 GMT+8
+> **Last updated:** 2026-05-17 18:05 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Latest commit:** `67e17be` (fix: auth-helpers fallback uses internal session API)
+> **Latest commit:** `4bfdae0` (feat: homepage real data + live toast + category images)
 > **Branch:** `main` — clean, up to date with origin
 > **Build status:** ✅ `npm run build` passes
 
@@ -70,6 +70,16 @@
 
 ### UI Redesign (10 pages done)
 Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)
+
+### Homepage Real Data + Enhancements (commit `4bfdae0`)
+| # | Feature | Details | Files |
+|---|---|---|---|
+| 1 | Stats Footer — real DB queries | CardCatalog count, completed Order count, SUM totalAmount (baht), User count | `app/(main)/page.tsx` |
+| 2 | Hero Stats — real data | Shows catalog count, members, completed sales instead of fake % | `app/(main)/page.tsx` |
+| 3 | Live Toast component | Cycles latest completed orders every 5s, bottom-left fixed, mock fallback | `components/home/live-toast.tsx` |
+| 4 | Category images updated | YGO→ygoprodeck, MTG→scryfall, One Piece→official site | `components/home/category-section.tsx` |
+| 5 | Hot This Week — PriceHistory | Tries PriceHistory for 7-day % change first, falls back to top viewed | `components/home/hot-this-week.tsx` |
+| 6 | Recent listings — 6 items | Reduced from 8 to 6 as per spec | `app/(main)/page.tsx` |
 
 ### Design System
 - **Colors:** bg `#09090b` (zinc-950), accent `#F59E0B` (amber-500), purple `#7C3AED`
@@ -280,6 +290,8 @@ Supabase Project: ruugptsudyxyozywevcu
 ## 📊 Commit History (recent)
 
 ```
+4bfdae0 feat: homepage real data + live toast + category images + hot this week price history
+c1f7f8f docs: update HANDOFF.md - latest state, test results, commit history
 67e17be fix: auth-helpers fallback uses internal session API instead of JWT decode (JWE encrypted)
 2b9171f fix: auth() not working in API routes on Netlify - add JWT cookie fallback via auth-helpers
 406f1d8 docs: update HANDOFF.md - sync commit history, add workflow flow for multi-agent handoff

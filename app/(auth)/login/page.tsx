@@ -1,229 +1,120 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react"
-
-function LoginContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/"
-
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [lineLoading, setLineLoading] = useState(false)
-  const [lineEnabled, setLineEnabled] = useState(false)
-
-  // Check if LINE login is available by looking for the provider
-  useEffect(() => {
-    fetch("/api/auth/providers")
-      .then((res) => res.json())
-      .then((providers) => {
-        if (providers?.line) {
-          setLineEnabled(true)
-        }
-      })
-      .catch(() => {
-        // LINE not available
-      })
-  }, [])
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        setError(result.error)
-      } else {
-        router.push(callbackUrl)
-        router.refresh()
-      }
-    } catch {
-      setError("เกิดข้อผิดพลาด กรุณาลองใหม่")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleLineLogin() {
-    setLineLoading(true)
-    try {
-      await signIn("line", { callbackUrl })
-    } catch {
-      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย LINE")
-      setLineLoading(false)
-    }
-  }
-
-  return (
-    <Card className="border-border/50 bg-card/80 backdrop-blur">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">เข้าสู่ระบบ</CardTitle>
-        <CardDescription className="text-center">
-          เข้าสู่ระบบเพื่อซื้อ-ขายการ์ด TCG
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* LINE Login Button */}
-        {lineEnabled && (
-          <>
-            <Button
-              variant="outline"
-              className="w-full border-0 text-white font-semibold"
-              size="lg"
-              style={{ backgroundColor: "#06C755" }}
-              onClick={handleLineLogin}
-              disabled={lineLoading || loading}
-            >
-              {lineLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                </svg>
-              )}
-              เข้าสู่ระบบด้วย LINE
-            </Button>
-
-            <div className="relative my-6">
-              <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                หรือ
-              </span>
-            </div>
-          </>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email">อีเมล</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                required
-                disabled={loading || lineLoading}
-                autoComplete="email"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">รหัสผ่าน</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-purple-400 hover:text-purple-300"
-              >
-                ลืมรหัสผ่าน?
-              </Link>
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
-                required
-                disabled={loading || lineLoading}
-                autoComplete="current-password"
-              />
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full"
-            variant="purple"
-            size="lg"
-            disabled={loading || lineLoading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                กำลังเข้าสู่ระบบ...
-              </>
-            ) : (
-              "เข้าสู่ระบบ"
-            )}
-          </Button>
-        </form>
-
-        {/* Show LINE hint when not configured */}
-        {!lineEnabled && (
-          <>
-            <div className="relative my-6">
-              <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                หรือ
-              </span>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full"
-              size="lg"
-              disabled
-            >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
-                  fill="currentColor"
-                />
-              </svg>
-              เข้าสู่ระบบด้วย LINE (เร็วๆ นี้)
-            </Button>
-          </>
-        )}
-      </CardContent>
-      <CardFooter>
-        <p className="text-sm text-center text-muted-foreground w-full">
-          ยังไม่มีบัญชี?{" "}
-          <Link href="/register" className="text-purple-400 hover:text-purple-300 font-medium">
-            สมัครสมาชิก
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
-  )
-}
+import { Shield, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-      <LoginContent />
-    </Suspense>
+    <div className="min-h-screen flex">
+      {/* Left — Visual */}
+      <div className="hidden lg:flex w-1/2 bg-zinc-900 relative overflow-hidden items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-amber-500/10" />
+        <div className="relative z-10 text-center px-12">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+              <Shield className="w-7 h-7 text-black" />
+            </div>
+            <span className="text-3xl font-bold text-white">CardVault</span>
+          </div>
+          <p className="text-zinc-400 text-lg mb-8">
+            ตลาดซื้อ-ขายการ์ด TCG ที่ใหญ่ที่สุดในประเทศไทย
+          </p>
+          <div className="space-y-4 text-left max-w-sm mx-auto">
+            {[
+              { icon: "🔒", text: "ระบบ Escrow คุ้มครองทุกธุรกรรม" },
+              { icon: "✅", text: "ผู้ขายยืนยันตัวตนทุกราย" },
+              { icon: "🔄", text: "คืนเงิน 7 วัน หากไม่ได้รับการ์ด" },
+            ].map((item) => (
+              <div key={item.text} className="flex items-center gap-3 px-4 py-3 bg-zinc-800/50 rounded-xl">
+                <span className="text-lg">{item.icon}</span>
+                <span className="text-sm text-zinc-300">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right — Form */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-zinc-950">
+        <div className="w-full max-w-sm">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-black" />
+            </div>
+            <span className="text-lg font-bold text-white">CardVault</span>
+          </div>
+
+          <h1 className="text-2xl font-bold text-white mb-2">ยินดีต้อนรับกลับมา</h1>
+          <p className="text-sm text-zinc-400 mb-8">เข้าสู่ระบบเพื่อซื้อ-ขายการ์ด TCG</p>
+
+          {/* LINE Login */}
+          <button className="w-full h-12 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors mb-6">
+            <span className="text-lg">💬</span>
+            เข้าสู่ระบบด้วย LINE
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-zinc-800" />
+            <span className="text-xs text-zinc-500">— หรือ —</span>
+            <div className="flex-1 h-px bg-zinc-800" />
+          </div>
+
+          {/* Form */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">อีเมล</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full h-11 px-4 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-zinc-300">รหัสผ่าน</label>
+                <Link href="/forgot-password" className="text-xs text-amber-400 hover:text-amber-300">
+                  ลืมรหัสผ่าน?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full h-11 px-4 pr-10 bg-zinc-900 border border-zinc-700 rounded-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <button className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-xl transition-colors">
+              เข้าสู่ระบบ
+            </button>
+          </div>
+
+          <p className="text-center text-sm text-zinc-400 mt-6">
+            ยังไม่มีบัญชี?{" "}
+            <Link href="/register" className="text-amber-400 hover:text-amber-300 font-medium">
+              สมัครสมาชิกฟรี →
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }

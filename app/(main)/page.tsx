@@ -1,68 +1,21 @@
 // @ts-nocheck
 import Link from "next/link"
-import Image from "next/image"
-
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { prisma } from "@/lib/prisma"
 import { formatPrice, SERIES_LABELS, CONDITION_LABELS } from "@/lib/utils"
-import {
-  Search,
-  Shield,
-  Truck,
-  Star,
-  ArrowRight,
-  Zap,
-  TrendingUp,
-  Users,
-} from "lucide-react"
+import { Search, ArrowRight, ShieldCheck, Sparkles, RotateCcw } from "lucide-react"
+import { HeroCards } from "@/components/home/hero-cards"
+import { StatsCounter } from "@/components/home/stats-counter"
+import { ScammerCheckBar } from "@/components/home/scammer-check-bar"
+import { CategorySection } from "@/components/home/category-section"
+import { HotThisWeek } from "@/components/home/hot-this-week"
+import { VerifiedSellerSpotlight } from "@/components/home/verified-seller-spotlight"
+import { ListingCard } from "@/components/listing/listing-card"
 
 export const dynamic = "force-dynamic"
 
-const SERIES_CARDS = [
-  {
-    series: "POKEMON",
-    name: "Pokemon",
-    image: "https://images.pokemontcg.io/swsh12/1_hires.png",
-    color: "from-yellow-500 to-red-500",
-  },
-  {
-    series: "YUGIOH",
-    name: "Yu-Gi-Oh!",
-    image: "https://images.pokemontcg.io/xy12/1_hires.png",
-    color: "from-purple-600 to-blue-600",
-  },
-  {
-    series: "MTG",
-    name: "Magic: The Gathering",
-    image: "https://images.pokemontcg.io/sm12/1_hires.png",
-    color: "from-orange-500 to-amber-500",
-  },
-  {
-    series: "ONE_PIECE",
-    name: "One Piece",
-    image: "https://images.pokemontcg.io/swsh11/1_hires.png",
-    color: "from-red-500 to-blue-500",
-  },
-]
-
 export default async function HomePage() {
-  // Fetch featured listings
-  const featuredListings = await prisma.listing.findMany({
-    where: {
-      status: "ACTIVE",
-      isFeatured: true,
-    },
-    include: {
-      images: { take: 1, orderBy: { order: "asc" } },
-      seller: { include: { user: { select: { name: true, username: true } } } },
-    },
-    take: 6,
-    orderBy: { createdAt: "desc" },
-  })
-
-  // Fetch recent listings
   const recentListings = await prisma.listing.findMany({
     where: { status: "ACTIVE" },
     include: {
@@ -73,270 +26,199 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   })
 
-  // Stats
   const totalListings = await prisma.listing.count({ where: { status: "ACTIVE" } })
   const totalUsers = await prisma.user.count()
   const totalOrders = await prisma.order.count({ where: { status: "COMPLETED" } })
 
-  // Series counts
-  const seriesCounts: Record<string, number> = {}
-  for (const s of SERIES_CARDS) {
-    seriesCounts[s.series] = await prisma.listing.count({
-      where: { status: "ACTIVE", series: s.series },
-    })
-  }
-
   return (
-    <div>
-      {/* Hero Section */}
+    <div className="bg-zinc-950">
+      {/* ===== HERO SECTION ===== */}
       <section className="relative overflow-hidden hero-gradient">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="absolute top-1/4 left-1/4 h-64 w-64 rounded-full bg-purple-600/20 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-gold/10 blur-3xl" />
-
-        <div className="container relative px-4 py-20 md:py-32">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <Badge variant="gold" className="text-sm px-4 py-1">
-              🇹🇭 Marketplace การ์ด TCG อันดับ 1 ของไทย
-            </Badge>
-
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              <span className="text-gradient">ซื้อ-ขายการ์ด TCG</span>
-              <br />
-              <span className="text-white">ปลอดภัย ไว้ใจได้</span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              ระบบ Escrow คุ้มครองทุกธุรกรรม Pokemon, Yu-Gi-Oh!, MTG, One Piece
-              และอีกมากมาย พร้อมจัดส่งทั่วประเทศไทย
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="xl" variant="gold" asChild>
-                <Link href="/browse">
-                  <Search className="mr-2 h-5 w-5" />
-                  ค้นหาการ์ด
-                </Link>
-              </Button>
-              <Button size="xl" variant="outline" asChild className="border-gold/30 text-gold hover:bg-gold/10">
-                <Link href="/sell/new">
-                  เริ่มขายการ์ด
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 pt-8 max-w-md mx-auto">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-gold">{totalListings.toLocaleString()}</div>
-                <div className="text-sm text-muted-foreground">รายการ</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-purple-400">{totalUsers.toLocaleString()}</div>
-                <div className="text-sm text-muted-foreground">สมาชิก</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-gold">{totalOrders.toLocaleString()}</div>
-                <div className="text-sm text-muted-foreground">ออเดอร์สำเร็จ</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Browse by Series */}
-      <section className="container px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold">เลือกซีรีส์</h2>
-            <p className="text-muted-foreground mt-1">ค้นหาการ์ดจากซีรีส์ที่คุณชื่นชอบ</p>
-          </div>
-          <Button variant="ghost" asChild>
-            <Link href="/browse">
-              ดูทั้งหมด
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+        {/* Particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 25 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-amber-400/20 rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${3 + Math.random() * 4}s`,
+              }}
+            />
+          ))}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {SERIES_CARDS.map((s) => (
-            <Link key={s.series} href={`/browse?series=${s.series}`}>
-              <Card className="group overflow-hidden hover:border-gold/50 transition-all duration-300 hover:shadow-lg hover:shadow-gold/10">
-                <div className={`h-32 bg-gradient-to-br ${s.color} relative overflow-hidden`}>
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                  <div className="absolute bottom-2 left-3">
-                    <span className="text-xs text-white/80">{seriesCounts[s.series] ?? 0} รายการ</span>
-                  </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-20">
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+            {/* LEFT — Text */}
+            <div className="flex-1 text-center lg:text-left space-y-6">
+              <Badge className="text-xs px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full w-fit">
+                🇹🇭 Marketplace การ์ด TCG อันดับ 1 ของไทย
+              </Badge>
+
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
+                <span className="text-gradient">ซื้อ-ขายการ์ด TCG</span>
+                <br />
+                <span className="text-white">ปลอดภัย ไว้ใจได้</span>
+              </h1>
+
+              <p className="text-base md:text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0">
+                ระบบ Escrow คุ้มครองทุกธุรกรรม
+              </p>
+
+              {/* Search Bar */}
+              <div className="flex max-w-xl mx-auto lg:mx-0">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                  <input
+                    type="text"
+                    placeholder="ค้นหาการ์ด, ซีรีส์, ผู้ขาย..."
+                    className="w-full h-[52px] pl-12 pr-4 bg-zinc-800 border border-zinc-700 rounded-l-xl text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
+                  />
                 </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-sm group-hover:text-gold transition-colors">
-                    {s.name}
-                  </h3>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Featured Listings */}
-      {featuredListings.length > 0 && (
-        <section className="container px-4 py-16">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                <Zap className="h-6 w-6 text-gold" />
-                รายการแนะนำ
-              </h2>
-              <p className="text-muted-foreground mt-1">การ์ดคุณภาพที่คัดสรรโดยทีมงาน</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {featuredListings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Recent Listings */}
-      <section className="container px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-purple-400" />
-              ลงขายล่าสุด
-            </h2>
-            <p className="text-muted-foreground mt-1">การ์ดที่เพิ่งลงขายใหม่</p>
-          </div>
-          <Button variant="ghost" asChild>
-            <Link href="/browse">
-              ดูทั้งหมด
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {recentListings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </div>
-      </section>
-
-      {/* Trust Section */}
-      <section className="border-t border-border/40 bg-card/50">
-        <div className="container px-4 py-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">
-            ทำไมต้อง <span className="text-gradient">CardVault</span>
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center space-y-4">
-              <div className="mx-auto h-16 w-16 rounded-2xl bg-purple-600/10 flex items-center justify-center">
-                <Shield className="h-8 w-8 text-purple-400" />
+                <button className="h-[52px] px-6 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm rounded-r-xl transition-colors">
+                  ค้นหา
+                </button>
               </div>
-              <h3 className="font-semibold text-lg">ระบบ Escrow</h3>
-              <p className="text-sm text-muted-foreground">
-                เงินจะถูกเก็บไว้ในระบบจนกว่าผู้ซื้อยืนยันว่าได้รับสินค้าถูกต้อง
-                คุ้มครองทั้งผู้ซื้อและผู้ขาย
-              </p>
+
+              {/* Trending Pills */}
+              <div className="flex flex-wrap items-center gap-2 justify-center lg:justify-start">
+                <span className="text-xs text-zinc-500">กำลังค้นหา:</span>
+                {["Charizard VMAX", "Blue-Eyes", "Luffy", "Mewtwo", "Pikachu V"].map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/browse?q=${encodeURIComponent(tag)}`}
+                    className="text-xs px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-300 hover:bg-amber-500/20 hover:border-amber-500/30 hover:text-amber-400 transition-all"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Trust Badges */}
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                {[
+                  { icon: "🔒", label: "Escrow", desc: "คุ้มครองทุกการซื้อขาย" },
+                  { icon: "✅", label: "Verified Seller", desc: "ผู้ขายยืนยันตัวตน" },
+                  { icon: "🔄", label: "คืนเงิน 7 วัน", desc: "หากไม่ได้รับการ์ด" },
+                ].map((badge) => (
+                  <div
+                    key={badge.label}
+                    className="flex items-center gap-2 px-3 py-2 bg-zinc-900 rounded-xl text-xs"
+                  >
+                    <span>{badge.icon}</span>
+                    <div>
+                      <span className="text-white font-medium">{badge.label}</span>
+                      <span className="text-zinc-500 ml-1 hidden sm:inline">{badge.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-6 pt-4 max-w-md mx-auto lg:mx-0">
+                <StatsCounter
+                  end={580}
+                  suffix="+"
+                  label="รายการการ์ด"
+                  icon={<Sparkles className="w-5 h-5" />}
+                />
+                <StatsCounter
+                  end={2350}
+                  suffix="+"
+                  label="สมาชิกทั้งหมด"
+                  icon={<ShieldCheck className="w-5 h-5" />}
+                />
+                <StatsCounter
+                  end={99}
+                  suffix="%"
+                  label="Dispute Resolved"
+                  icon={<RotateCcw className="w-5 h-5" />}
+                />
+              </div>
             </div>
 
-            <div className="text-center space-y-4">
-              <div className="mx-auto h-16 w-16 rounded-2xl bg-gold/10 flex items-center justify-center">
-                <Star className="h-8 w-8 text-gold" />
-              </div>
-              <h3 className="font-semibold text-lg">ผู้ขายที่น่าเชื่อถือ</h3>
-              <p className="text-sm text-muted-foreground">
-                ระบบ Verified Seller และรีวิวจากผู้ซื้อจริง
-                คุณมั่นใจได้ว่าจะได้การ์ดของแท้ตามที่โฆษณา
-              </p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="mx-auto h-16 w-16 rounded-2xl bg-green-500/10 flex items-center justify-center">
-                <Truck className="h-8 w-8 text-green-400" />
-              </div>
-              <h3 className="font-semibold text-lg">จัดส่งทั่วไทย</h3>
-              <p className="text-sm text-muted-foreground">
-                เลือกขนส่งได้หลากหลาย Kerry, Flash, Thailand Post
-                พร้อมเลข tracking ติดตามพัสดุ
-              </p>
+            {/* RIGHT — Floating Cards */}
+            <div className="flex-1 w-full max-w-lg">
+              <HeroCards />
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="container px-4 py-16">
-        <Card className="relative overflow-hidden border-gold/20">
-          <div className="absolute inset-0 card-gradient" />
-          <CardContent className="relative p-8 md:p-12 text-center space-y-6">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              พร้อมเริ่มขายการ์ดของคุณ?
-            </h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              สมัครสมาชิกฟรี ลงขายได้ทันที ไม่มีค่าใช้จ่ายจนกว่าจะขายได้
-            </p>
-            <Button size="xl" variant="gold" asChild>
-              <Link href="/register">
-                <Users className="mr-2 h-5 w-5" />
-                สมัครสมาชิกฟรี
+      {/* ===== SCAMMER CHECK BAR ===== */}
+      <ScammerCheckBar />
+
+      {/* ===== CATEGORY SECTION ===== */}
+      <CategorySection />
+
+      {/* ===== LISTINGS + HOT SECTION ===== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* LEFT — Recent Listings */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-6">
+              <Sparkles className="w-5 h-5 text-amber-400" />
+              <div>
+                <h2 className="text-xl font-bold text-white">ลงขายล่าสุด</h2>
+                <p className="text-xs text-zinc-400">รายการใหม่จาก Verified Sellers</p>
+              </div>
+              <Link href="/browse" className="ml-auto text-sm text-amber-400 hover:text-amber-300 transition-colors">
+                ดูทั้งหมด →
               </Link>
-            </Button>
-          </CardContent>
-        </Card>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {recentListings.map((listing, i) => (
+                <ListingCard key={listing.id} listing={listing} index={i} />
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — Hot This Week */}
+          <div className="w-full lg:w-80 shrink-0">
+            <HotThisWeek />
+          </div>
+        </div>
+      </section>
+
+      {/* ===== VERIFIED SELLER SPOTLIGHT ===== */}
+      <VerifiedSellerSpotlight />
+
+      {/* ===== STATS FOOTER BAR ===== */}
+      <section className="w-full bg-zinc-900 border-t border-zinc-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <StatsCounter
+              end={125000}
+              suffix="+"
+              label="การ์ดทั้งหมดในระบบ"
+              icon={<span className="text-xl">🃏</span>}
+            />
+            <StatsCounter
+              end={89000}
+              suffix="+"
+              label="ซื้อขายสำเร็จ"
+              icon={<span className="text-xl">✅</span>}
+            />
+            <StatsCounter
+              end={45}
+              suffix=".2M+"
+              prefix="฿"
+              label="มูลค่าซื้อขายรวม"
+              icon={<span className="text-xl">💰</span>}
+            />
+            <StatsCounter
+              end={2300}
+              suffix="+"
+              label="สมาชิกไว้วางใจ"
+              icon={<span className="text-xl">👥</span>}
+            />
+          </div>
+        </div>
       </section>
     </div>
-  )
-}
-
-function ListingCard({ listing }: { listing: any }) {
-  const imageUrl = listing.images?.[0]?.url ?? "/placeholder-card.png"
-
-  return (
-    <Link href={`/listing/${listing.id}`}>
-      <Card className="group overflow-hidden hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
-        <div className="relative aspect-[3/4] bg-muted overflow-hidden">
-          <Image
-            src={imageUrl}
-            alt={listing.customName ?? listing.card?.name ?? "Card"}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 50vw, 25vw"
-          />
-          {listing.isGraded && (
-            <Badge variant="gold" className="absolute top-2 left-2 text-[10px]">
-              {listing.gradingCompany} {listing.gradeScore}
-            </Badge>
-          )}
-          {listing.isFeatured && (
-            <Badge variant="purple" className="absolute top-2 right-2 text-[10px]">
-              ⭐ แนะนำ
-            </Badge>
-          )}
-        </div>
-        <CardContent className="p-3 space-y-1">
-          <p className="text-xs text-muted-foreground truncate">
-            {SERIES_LABELS[listing.series] ?? listing.series}
-          </p>
-          <h3 className="font-medium text-sm truncate group-hover:text-purple-400 transition-colors">
-            {listing.customName ?? listing.card?.name ?? "Untitled"}
-          </h3>
-          <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gold">
-              {formatPrice(listing.price)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {CONDITION_LABELS[listing.condition] ?? listing.condition}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
   )
 }

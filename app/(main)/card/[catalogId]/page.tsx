@@ -37,24 +37,30 @@ export async function generateMetadata({ params }: CardPageProps): Promise<Metad
 }
 
 export default async function CardCatalogPage({ params }: CardPageProps) {
-  const card = await prisma.cardCatalog.findUnique({
-    where: { id: params.catalogId },
-    include: {
-      priceHistory: {
-        orderBy: { recordedAt: "desc" },
-        take: 30,
-      },
-      listings: {
-        where: { status: "ACTIVE" },
-        include: {
-          images: { take: 1, orderBy: { order: "asc" } },
-          seller: { include: { user: { select: { name: true, username: true } } } },
+  let card
+  try {
+    card = await prisma.cardCatalog.findUnique({
+      where: { id: params.catalogId },
+      include: {
+        priceHistory: {
+          orderBy: { recordedAt: "desc" },
+          take: 30,
         },
-        orderBy: { price: "asc" },
-        take: 12,
+        listings: {
+          where: { status: "ACTIVE" },
+          include: {
+            images: { take: 1, orderBy: { order: "asc" } },
+            seller: { include: { user: { select: { name: true, username: true } } } },
+          },
+          orderBy: { price: "asc" },
+          take: 12,
+        },
       },
-    },
-  })
+    })
+  } catch (e) {
+    console.error("CardCatalogPage error:", e)
+    notFound()
+  }
 
   if (!card) notFound()
 

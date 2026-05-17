@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-client"
 import { prisma } from "@/lib/prisma"
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/auth-helpers"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Only allow ADMIN users
-  const session = await auth()
-  const userId = (session?.user as { id?: string; role?: string })?.id
-  const userRole = (session?.user as { id?: string; role?: string })?.role
+  const session = await getSession(request)
+  const userId = session?.user?.id
+  const userRole = (session?.user as any)?.role
   if (!userId || userRole !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
   }

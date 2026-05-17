@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as { id?: string })?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 })
     }
@@ -47,8 +46,7 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as { id?: string })?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 })
     }

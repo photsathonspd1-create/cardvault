@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { rateLimiters, checkRateLimit } from "@/lib/rate-limit"
 import { identifyCard, searchPokemonCards } from "@/services/card-identify.service"
 
@@ -15,8 +15,7 @@ import { identifyCard, searchPokemonCards } from "@/services/card-identify.servi
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }),
@@ -108,9 +107,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const session = await auth()
-    const userId2 = (session?.user as any)?.id
-    if (!userId2) {
+    const userId = await getUserId(request)
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }),
         { status: 401, headers: { "Content-Type": "application/json" } }
@@ -120,7 +118,7 @@ export async function GET(request: NextRequest) {
     // Rate limit
     const rateLimitResult = await checkRateLimit(
       rateLimiters.cardIdentify,
-      userId2
+      userId
     )
     if (!rateLimitResult.success) return rateLimitResult.response
 

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { createPromptPayCharge, createCardCharge, isOmiseConfigured } from "@/lib/omise"
 import { z } from "zod"
@@ -17,8 +17,7 @@ const chargeSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 })
     }

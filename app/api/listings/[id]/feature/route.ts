@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 /**
@@ -25,8 +25,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    const userId = (session?.user as Record<string, unknown>)?.id as string | undefined
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }), {
         status: 401,

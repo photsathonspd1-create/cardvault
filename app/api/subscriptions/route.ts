@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId, getSession } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { PlanType } from "@prisma/client"
 
@@ -9,10 +9,9 @@ import { PlanType } from "@prisma/client"
  * POST /api/subscriptions — Create/update subscription
  */
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as Record<string, unknown>)?.id as string | undefined
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }), {
         status: 401,
@@ -50,8 +49,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as Record<string, unknown>)?.id as string | undefined
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }), {
         status: 401,
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest) {
       profile = await prisma.sellerProfile.create({
         data: {
           userId,
-          displayName: (session?.user as Record<string, unknown>)?.name as string ?? "Seller",
+          displayName: "Seller",
         },
         include: { subscription: true },
       })

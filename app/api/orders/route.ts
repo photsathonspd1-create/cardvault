@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { rateLimiters, checkRateLimit } from "@/lib/rate-limit"
 import { calculatePlatformFee, calculateSellerReceives } from "@/services/escrow.service"
@@ -21,8 +21,7 @@ const createOrderSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }),

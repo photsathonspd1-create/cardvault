@@ -1,14 +1,15 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const user = session?.user as any
+    const session = await getSession(request)
+    const userId = session?.user?.id
+    const userRole = (session?.user as any)?.role
 
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+    if (!user || (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN")) {
       return new Response(
         JSON.stringify({ error: "ไม่มีสิทธิ์" }),
         { status: 403, headers: { "Content-Type": "application/json" } }

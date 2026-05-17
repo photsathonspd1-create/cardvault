@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId, getSession } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(
@@ -8,8 +8,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่系统" }),
@@ -41,7 +40,8 @@ export async function GET(
     }
 
     // Only buyer, seller, or admin can view
-    const userRole = (session!.user as any).role
+    const _session = await getSession(request)
+    const userRole = _session?.user?.role
     if (order.buyerId !== userId && order.sellerId !== userId && userRole !== "ADMIN") {
       return new Response(
         JSON.stringify({ error: "ไม่มีสิทธิ์ดูออเดอร์นี้" }),

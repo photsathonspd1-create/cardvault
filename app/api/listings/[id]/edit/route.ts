@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId, getSession } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { Condition, CardLanguage, ListingStatus } from "@prisma/client"
@@ -21,8 +21,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่系统" }),
@@ -43,7 +42,8 @@ export async function PATCH(
     }
 
     // Only owner or admin can edit
-    const userRole = (session!.user as any).role
+    const _session = await getSession(request)
+    const userRole = _session?.user?.role
     if (listing.seller.userId !== userId && userRole !== "ADMIN") {
       return new Response(
         JSON.stringify({ error: "ไม่มีสิทธิ์แก้ไข" }),
@@ -83,8 +83,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่系统" }),
@@ -104,7 +103,8 @@ export async function DELETE(
       )
     }
 
-    const userRole = (session!.user as any).role
+    const _session = await getSession(request)
+    const userRole = _session?.user?.role
     if (listing.seller.userId !== userId && userRole !== "ADMIN") {
       return new Response(
         JSON.stringify({ error: "ไม่มีสิทธิ์ลบ" }),

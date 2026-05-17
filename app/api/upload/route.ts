@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { supabaseAdmin } from "@/lib/supabase-client"
 import { checkRateLimit, rateLimiters } from "@/lib/rate-limit"
 import crypto from "crypto"
@@ -17,8 +17,7 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }),

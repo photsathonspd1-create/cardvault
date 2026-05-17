@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/auth-helpers"
 import { rateLimiters, checkRateLimit } from "@/lib/rate-limit"
 import { generatePresignedUploadUrl, isR2Configured } from "@/lib/r2"
 import crypto from "crypto"
@@ -14,8 +14,7 @@ import crypto from "crypto"
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as Record<string, unknown>)?.id as string | undefined
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }),

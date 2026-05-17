@@ -10,8 +10,7 @@ import crypto from "crypto"
 export async function POST(request: NextRequest) {
   try {
     const { auth } = await import("@/lib/auth")
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 })
     }

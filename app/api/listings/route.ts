@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+import { getUserId, getSession } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { rateLimiters, checkRateLimit } from "@/lib/rate-limit"
 import { z } from "zod"
@@ -34,8 +34,7 @@ const createListingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    const userId = (session?.user as any)?.id
+    const userId = await getUserId(request)
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "กรุณาเข้าสู่ระบบ" }),
@@ -71,7 +70,7 @@ export async function POST(request: NextRequest) {
       sellerProfile = await prisma.sellerProfile.create({
         data: {
           userId,
-          displayName: (session!.user as any).name ?? "Seller",
+          displayName: "Seller",
         },
       })
     }

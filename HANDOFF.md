@@ -1,82 +1,135 @@
-# 🔄 CardVault — Agent Handoff Document
-
-**Last Updated:** 2026-05-17 00:10 GMT+8
-**Working Directory:** `/root/.openclaw/workspace/cardvault`
+# CardVault — Agent Handoff Document
+## Updated: 2026-05-17
 
 ---
 
-## 📋 Project Overview
+## 🔗 Project Links
 
-**CardVault** — Thai TCG (Trading Card Game) buy/sell marketplace with escrow system.
-
-- **Live URL:** https://cardvault-drab.vercel.app
-- **GitHub:** https://github.com/photsathonspd1-create/cardvault
-- **Supabase Project Ref:** `ruugptsudyxyozywevcu`
-- **Supabase Region:** `ap-southeast-1` (Singapore)
-- **Vercel Project:** `photsathon-kumtaews-projects/cardvault`
+| Resource | URL |
+|----------|-----|
+| **เว็บ (Production)** | https://cardvault-drab.vercel.app/ |
+| **GitHub Repo** | https://github.com/photsathonspd1-create/cardvault |
+| **Vercel Dashboard** | https://vercel.com/photsathon-kumtaews-projects/cardvault |
 
 ---
 
-## ✅ What's Done
+## 🔑 Tokens & Credentials
 
-### 1. Database Schema — COMPLETE ✅
-- Created **29 tables** on Supabase via Management API SQL
-- All enums (16), indexes, foreign keys, constraints created
-- Tables: User, Account, Session, VerificationToken, SellerProfile, SellerSubscription, BankAccount, CardCatalog, PriceHistory, Listing, ListingImage, ShippingOption, Order, OrderStatusHistory, Dispute, DisputeEvidence, Review, Watchlist, PriceAlert, Notification, Report, AuditLog, SystemSetting, CommunityPost, PostComment, PostLike, ForumThread, ForumReply, ScammerReport
+> **⚠️ NEVER commit tokens to git. Use environment variables or pass them in chat.**
 
-### 2. Seed Data — COMPLETE ✅
-- **6 users** (1 admin, 3 sellers, 2 buyers) — password: `password123`
-- **3 seller profiles** (GOLD, SILVER, VERIFIED_PRO tiers)
-- **12 Pokemon cards** in CardCatalog (Charizard VMAX, Pikachu VMAX, Mew ex, etc.)
-- **12 active listings** with images and shipping options
-- **2 sample orders** (1 DELIVERED, 1 COMPLETED)
-- **1 review**, **3 watchlist entries**, **2 notifications**, **4 system settings**
-
-### 3. Vercel Environment Variables — PARTIALLY DONE ⚠️
-Set via Vercel CLI:
-- `DATABASE_URL` — set but **NOT WORKING** (see blockers below)
-- `NEXTAUTH_SECRET` — ✅ set
-- `NEXTAUTH_URL` — ✅ set to `https://cardvault-drab.vercel.app`
-- `NEXT_PUBLIC_APP_URL` — ✅ set
-- `PLATFORM_FEE_PERCENT` — ✅ set to `6`
-- `ESCROW_AUTO_RELEASE_DAYS` — ✅ set to `7`
-
-### 4. Deployment — DEPLOYED BUT DB NOT CONNECTED ⚠️
-- Site builds and deploys on Vercel ✅
-- Pages render but **no data loads** because DB connection fails at runtime
+```
+# Ask the human for these credentials:
+GitHub PAT:       (ask human)
+Vercel Token:     (ask human)
+Vercel Project:   prj_FoW9G9bBDARIEK573IjP1ZDYwAZU
+Supabase URL:     https://ruugptsudyxyozywevcu.supabase.co
+Supabase Key:     (ask human)
+Supabase Project: ruugptsudyxyozywevcu
+```
 
 ---
 
-## 🚧 Blockers — MUST FIX FIRST
+## 📦 Tech Stack
 
-### **BLOCKER: Database Connection Not Working**
+- **Framework:** Next.js 14.2.21 (App Router)
+- **Database:** Prisma + Supabase (PostgreSQL)
+- **Auth:** NextAuth 5.0.0-beta.25
+- **UI:** Tailwind CSS + shadcn/ui + Framer Motion
+- **Payment:** Omise (Thai payment gateway)
+- **Hosting:** Vercel (auto-deploy from `main` branch)
+- **Font:** Sarabun (Thai) + Inter (Latin) — Google Fonts
 
-The Supabase database connection string is not working from Vercel. Tested multiple formats:
+---
 
-| Format | Result |
-|--------|--------|
-| `postgresql://postgres:%2F%2ASa0834145774@db.ruugptsudyxyozywevcu.supabase.co:5432/postgres` | Can't reach server (port 5432 blocked) |
-| `postgresql://postgres.ruugptsudyxyozywevcu:...@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres` | "tenant/user not found" |
-| `postgresql://postgres.ruugptsudyxyozywevcu:...@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres` | "tenant/user not found" |
+## 🎨 UI Redesign Status (Completed 2026-05-17)
 
-**Root Cause:** The Supabase connection pooler (Supavisor) is rejecting the connection. Possible reasons:
-1. The database password `/*Sa0834145774` might be incorrect (user-provided, unverified)
-2. The pooler might not be enabled on this project
-3. The connection string format might be wrong for this Supabase project version
+**Theme: "Dark Gaming Luxury"** — zinc-950 bg, amber-500 accent, purple secondary
 
-**How to Fix:**
-1. Go to **Supabase Dashboard** → cardvault project → **Settings** → **Database**
-2. Find the **Connection string** section → copy the **URI** (pooler or direct)
-3. If password is unknown, click **Reset database password** and set a new one
-4. Update `DATABASE_URL` in Vercel environment variables:
-   - Vercel Dashboard → cardvault → Settings → Environment Variables → edit `DATABASE_URL`
-   - Or use CLI: `vercel env rm DATABASE_URL production --yes && echo 'NEW_URL' | vercel env add DATABASE_URL production`
-5. Redeploy: `vercel --prod --yes`
+### ✅ Completed Pages (10/10)
 
-**Supabase Management API Access (for SQL queries):**
-- Personal Access Token: `[SET_IN_ENV — SUPABASE_PAT]`
-- Can run SQL via: `POST https://api.supabase.com/v1/projects/ruugptsudyxyozywevcu/database/query`
-- Example: `curl -s -X POST "https://api.supabase.com/v1/projects/ruugptsudyxyozywevcu/database/query" -H "Authorization: Bearer $SUPABASE_PAT" -H "Content-Type: application/json" -d '{"query": "SELECT count(*) FROM \"User\""}'`
+| Page | File | Status |
+|------|------|--------|
+| Homepage | `app/(main)/page.tsx` | ✅ Redesigned |
+| Browse | `app/(main)/browse/page.tsx` + `browse-content.tsx` | ✅ Redesigned |
+| Listing Detail | `app/(main)/listing/[id]/page.tsx` + `listing-detail-client.tsx` | ✅ Redesigned |
+| Sell/New (4-step wizard) | `app/sell/new/page.tsx` | ✅ Redesigned |
+| Seller Dashboard | `app/sell/page.tsx` | ✅ Redesigned |
+| Order Detail | `app/(main)/orders/[id]/page.tsx` | ✅ Redesigned |
+| Profile | `app/(main)/profile/[username]/page.tsx` | ✅ Redesigned |
+| Scammer Check | `app/check/page.tsx` | ✅ Redesigned |
+| Admin Panel | `app/admin/page.tsx` | ✅ Redesigned |
+| Auth (Login + Register) | `app/(auth)/login/page.tsx`, `register/page.tsx` | ✅ Redesigned |
+
+### ✅ Completed Components
+
+| Component | File |
+|-----------|------|
+| Navbar | `components/shared/header.tsx` |
+| Footer | `components/shared/footer.tsx` |
+| Mobile Bottom Nav | `components/shared/mobile-bottom-nav.tsx` |
+| Live Toast | `components/shared/live-toast.tsx` |
+| Hero Cards (floating) | `components/home/hero-cards.tsx` |
+| Stats Counter | `components/home/stats-counter.tsx` |
+| Scammer Check Bar | `components/home/scammer-check-bar.tsx` |
+| Category Section | `components/home/category-section.tsx` |
+| Hot This Week | `components/home/hot-this-week.tsx` |
+| Verified Sellers | `components/home/verified-seller-spotlight.tsx` |
+| Listing Card | `components/listing/listing-card.tsx` |
+| Filter Sidebar | `components/browse/filter-sidebar.tsx` |
+
+### ✅ Design System
+
+| File | Description |
+|------|-------------|
+| `tailwind.config.ts` | Full color tokens, animations, shadows, gradients |
+| `app/globals.css` | CSS variables for dark theme, utilities |
+| `lib/design-tokens.ts` | Color constants, effects, animation configs, tier/condition colors |
+| `app/layout.tsx` | Root layout with Sarabun + Inter fonts |
+
+---
+
+## ⚠️ Known Issues / Next Steps
+
+1. **Mock Data:** Seller dashboard, profile, hot-this-week, scammer check use mock data — need real API integration
+2. **Missing Features:**
+   - Realtime price history chart (Recharts) on listing detail
+   - Card scanner camera integration (Step 1 of sell wizard)
+   - Payment flow (Omise integration) on checkout
+   - Chat/messaging between buyer/seller
+   - Watchlist functionality
+   - Notification system
+3. **Pages Not Redesigned:**
+   - `app/(main)/checkout/[listingId]/page.tsx` — checkout flow
+   - `app/(main)/orders/page.tsx` — orders list
+   - `app/sell/analytics/page.tsx` — analytics (currently Recharts)
+   - `app/sell/subscription/page.tsx` — subscription plans
+   - `app/sell/kyc/page.tsx` — KYC verification
+   - `app/community/*` — forum pages
+   - `app/(main)/how-it-works/page.tsx`
+   - `app/(main)/faq/page.tsx`
+   - `app/(main)/contact/page.tsx`
+   - `app/(main)/escrow-info/page.tsx`
+   - `app/(main)/terms/page.tsx`
+   - `app/(main)/privacy/page.tsx`
+4. **Seller Dashboard:** Uses client-side tab switching, not URL-based routing — sub-pages like `/sell/listings`, `/sell/orders` still have old code
+5. **Admin Sub-pages:** `app/admin/listings/`, `app/admin/disputes/`, `app/admin/users/` still have old code — main admin page uses client-side tabs
+
+---
+
+## 🚀 How to Deploy
+
+```bash
+# Git push to main = auto deploy on Vercel
+cd /root/.openclaw/workspace/cardvault
+git add -A && git commit -m "message" && git push origin main
+
+# If Vercel doesn't auto-deploy, trigger via API:
+curl -s -X POST \
+  -H "Authorization: Bearer <VERCEL_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"cardvault","gitSource":{"type":"github","ref":"main","repoId":1240720011}}' \
+  "https://api.vercel.com/v13/deployments"
+```
 
 ---
 
@@ -85,150 +138,72 @@ The Supabase database connection string is not working from Vercel. Tested multi
 ```
 cardvault/
 ├── app/
-│   ├── (auth)/           # Login, Register
-│   ├── (main)/           # Main layout
-│   │   ├── browse/       # Browse listings (browse/page.tsx)
-│   │   ├── listing/      # Listing detail
-│   │   ├── checkout/     # Checkout flow
-│   │   ├── orders/       # Buyer orders
-│   │   └── profile/      # User profile
-│   ├── sell/             # Seller pages
-│   │   ├── new/          # Create listing (multi-step)
-│   │   ├── listings/     # My listings
-│   │   └── orders/       # Seller orders
-│   ├── admin/            # Admin panel
-│   │   ├── listings/     # Approve/reject
-│   │   ├── disputes/     # Manage disputes
-│   │   ├── kyc/          # KYC review
-│   │   └── users/        # User management
-│   ├── api/              # API routes (REST)
-│   │   ├── auth/         # NextAuth + register
-│   │   ├── listings/     # CRUD listings
-│   │   ├── orders/       # Create orders
-│   │   ├── cards/        # Card identification (OCR)
-│   │   ├── community/    # Community posts
-│   │   ├── forum/        # Forum threads/replies
-│   │   ├── payments/     # Omise payment
-│   │   ├── reports/      # Scammer reports
-│   │   ├── subscriptions/# Seller subscriptions
-│   │   ├── upload/       # File upload (R2 presigned URLs)
-│   │   ├── users/        # User management
-│   │   ├── webhooks/     # Omise webhooks
-│   │   └── cron/         # Escrow auto-release
-│   ├── community/        # Community page
-│   ├── card/             # Card catalog detail
-│   ├── check/            # Check page
-│   └── login/register    # Auth pages
+│   ├── (auth)/          # Login, Register (split-screen layout)
+│   ├── (main)/          # Main layout with Header/Footer/MobileNav/LiveToast
+│   │   ├── browse/      # Browse with filter sidebar
+│   │   ├── listing/[id] # Listing detail
+│   │   ├── orders/      # Orders
+│   │   ├── profile/     # User profiles
+│   │   └── page.tsx     # Homepage
+│   ├── admin/           # Admin panel (sidebar layout)
+│   ├── sell/            # Seller pages (sidebar layout)
+│   │   ├── new/         # 4-step wizard
+│   │   └── page.tsx     # Dashboard
+│   ├── check/           # Scammer check
+│   ├── api/             # API routes (DO NOT MODIFY)
+│   └── layout.tsx       # Root layout
 ├── components/
-│   ├── ui/               # shadcn/ui components
-│   └── shared/           # Header, Footer, etc.
-├── lib/                  # Utilities, auth config, rate limiting
-├── services/             # Business logic (escrow, card identify)
-├── prisma/
-│   ├── schema.prisma     # Database schema (29 tables, 16 enums)
-│   └── seed.ts           # Seed script (Node.js version)
-├── seed.sql              # SQL seed (already executed on Supabase)
-└── .env.example          # Environment variable template
+│   ├── home/            # Homepage components
+│   ├── browse/          # Browse components
+│   ├── listing/         # Listing components
+│   ├── shared/          # Header, Footer, MobileNav, LiveToast, etc.
+│   ├── order/           # Order components
+│   ├── scanner/         # Card scanner
+│   └── ui/              # shadcn/ui primitives
+├── lib/
+│   ├── design-tokens.ts # Design system constants
+│   ├── utils.ts         # Utilities (formatPrice, SERIES_LABELS, etc.)
+│   ├── prisma.ts        # Prisma client
+│   └── auth.ts          # NextAuth config
+├── prisma/              # Schema + seed
+└── services/            # Business logic (escrow, card identify)
 ```
 
 ---
 
-## 🔑 Tech Stack
+## 🎯 Design System Reference
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 14 (App Router) |
-| ORM | Prisma 5.22 |
-| Database | Supabase (PostgreSQL 17.6) |
-| Auth | NextAuth.js (credentials + LINE login) |
-| Payment | Omise (Thai payment gateway) |
-| Storage | Cloudflare R2 (images) |
-| UI | shadcn/ui + Tailwind CSS |
-| Hosting | Vercel |
-| Rate Limiting | Upstash Redis (optional, falls back to in-memory) |
-| Email | Resend |
-| Card OCR | Pokemon TCG API (optional) |
+```
+bg-primary:     #09090b (zinc-950)
+bg-secondary:   #18181b (zinc-900)
+bg-card:        #27272A (zinc-800)
+accent-gold:    #F59E0B (amber-500)
+accent-purple:  #7C3AED (violet-600)
+text-primary:   #FAFAFA (zinc-50)
+text-secondary: #A1A1AA (zinc-400)
+text-muted:     #52525B (zinc-600)
+border:         #27272A (zinc-800)
+success:        #22C55E (green-500)
+danger:         #EF4444 (red-500)
 
----
-
-## 📝 What's Left To Do
-
-### Critical (site won't work without these)
-1. **Fix DATABASE_URL** — Get correct connection string from Supabase dashboard
-2. **Set remaining env vars on Vercel** (optional but needed for full functionality):
-   - `OMISE_PUBLIC_KEY` / `OMISE_SECRET_KEY` — for payments
-   - `R2_ENDPOINT` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_URL` — for image uploads
-   - `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — for email notifications
-   - `LINE_CLIENT_ID` / `LINE_CLIENT_SECRET` — for LINE login (optional)
-   - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — for rate limiting (optional)
-
-### Important
-3. **Generate Prisma Client on Vercel** — `postinstall` script handles this, but needs DB connection for `db push`
-4. **Run `prisma db push`** against Supabase from a machine with network access to port 5432 (or use pooler)
-5. **Test all flows** — browse, login, create listing, checkout, orders, admin panel
-
-### Nice to Have
-6. **Set up Supabase RLS policies** (Row Level Security) — currently no RLS
-7. **Set up Supabase Storage** as alternative to Cloudflare R2
-8. **Configure custom domain** on Vercel (cardvault.co.th)
-9. **Set up Omise webhook** endpoint for payment confirmations
-10. **Cron job for escrow auto-release** (Vercel Cron or Supabase pg_cron)
-
----
-
-## 🔐 Credentials Summary
-
-| Service | Credential | Status |
-|---------|-----------|--------|
-| Supabase Management API | `[SUPABASE_PAT]` | Working ✅ |
-| Supabase Anon Key | Available in Supabase Dashboard → API | Available |
-| Supabase Service Role | Available in Supabase Dashboard → API | Available |
-| Supabase DB Password | **Needs verification from Supabase Dashboard** | **Unverified** ⚠️ |
-| Vercel Token | `[VERCEL_TOKEN]` | Working ✅ |
-| GitHub Token | `[GITHUB_TOKEN]` | Working ✅ |
-
----
-
-## 🧪 Test Accounts (Seeded Data)
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@cardvault.co.th | password123 |
-| Seller (GOLD) | seller1@example.com | password123 |
-| Seller (SILVER) | seller2@example.com | password123 |
-| Seller (VERIFIED_PRO) | seller3@example.com | password123 |
-| Buyer | buyer1@example.com | password123 |
-| Buyer | buyer2@example.com | password123 |
-
----
-
-## 🛠️ Useful Commands
-
-```bash
-# Navigate to project
-cd /root/.openclaw/workspace/cardvault
-
-# Run SQL on Supabase via Management API
-curl -s -X POST "https://api.supabase.com/v1/projects/ruugptsudyxyozywevcu/database/query" \
-  -H "Authorization: Bearer $SUPABASE_PAT" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "YOUR_SQL_HERE"}'
-
-# Deploy to Vercel
-vercel --prod --token "$VERCEL_TOKEN" --yes
-
-# Set Vercel env var
-echo 'VALUE' | vercel env add KEY_NAME production --token "$VERCEL_TOKEN"
-
-# Push to GitHub
-git add -A && git commit -m "message" && git push origin main
+Font Thai:  Sarabun (Google Fonts)
+Font Latin: Inter (Google Fonts)
 ```
 
 ---
 
-## ⚡ Next Agent: Start Here
+## ⚡ Critical Rules (ห้ามลืม)
 
-1. **First priority:** Fix the DATABASE_URL by getting the correct connection string from Supabase Dashboard
-2. Then set it on Vercel and redeploy
-3. Verify the site loads data at https://cardvault-drab.vercel.app/browse
-4. Test login with test accounts above
+1. **ห้ามแก้ API routes, Prisma schema, business logic** — UI layer only
+2. **ทุก image ต้องใช้ next/image** — ห้าม `<img>`
+3. **ทุก component mobile responsive** — test 375px + 1440px
+4. **Framer Motion: reduced-motion check** ทุก animation
+5. **Thai text: Sarabun font เสมอ**
+6. **Error + Loading states** ทุก async component
+7. **Build ต้องผ่านก่อน push** — `npm run build`
+8. **Vercel auto-deploy จาก main** — push = deploy
+9. **ห้าม commit token/secret ลง git** — GitHub secret scanning จะ block
+
+---
+
+*Generated: 2026-05-17 10:49 GMT+8*

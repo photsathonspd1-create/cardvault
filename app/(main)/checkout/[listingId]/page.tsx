@@ -18,16 +18,30 @@ interface CheckoutPageProps {
   params: { listingId: string }
 }
 
+interface CheckoutListing {
+  id: string
+  customName?: string | null
+  price: number
+  condition: string
+  series: string
+  isGraded?: boolean
+  gradingCompany?: string | null
+  gradeScore?: string | null
+  images?: { url: string }[]
+  seller?: { id?: string; user?: { name?: string | null } }
+  shippingOptions?: { provider: string; price: number; name: string }[]
+}
+
 export default function CheckoutPage({ params }: CheckoutPageProps) {
   const router = useRouter()
   const { data: session } = useSession()
-  const [listing, setListing] = useState<any>(null)
+  const [listing, setListing] = useState<CheckoutListing | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [paymentStep, setPaymentStep] = useState(false)
-  const [paymentData, setPaymentData] = useState<any>(null)
+  const [paymentData, setPaymentData] = useState<{ authorizeUri?: string; qrCodeUrl?: string } | null>(null)
   const [orderId, setOrderId] = useState<string>("")
 
   const [form, setForm] = useState({

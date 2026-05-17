@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { FileText } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "ข้อกำหนดการใช้งาน | CardVault",
@@ -7,58 +8,55 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="container px-4 py-12 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">ข้อกำหนดการใช้งาน</h1>
-      <p className="text-muted-foreground mb-8">อัปเดตล่าสุด: 17 พฤษภาคม 2569</p>
+    <div className="bg-zinc-950 min-h-screen">
+      <section className="relative py-20 border-b border-zinc-800">
+        <div className="relative max-w-3xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full text-sm text-amber-400 mb-6">
+            <FileText className="w-4 h-4" />
+            เอกสารทางกฎหมาย
+          </div>
+          <h1 className="text-4xl font-extrabold text-white mb-4">ข้อกำหนดการใช้งาน</h1>
+          <p className="text-sm text-zinc-500">อัปเดตล่าสุด: 17 พฤษภาคม 2569</p>
+        </div>
+      </section>
 
-      <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
-        <section>
-          <h2 className="text-xl font-semibold">1. การยอมรับข้อกำหนด</h2>
-          <p className="text-muted-foreground">
-            การเข้าถึงและใช้งานเว็บไซต์ CardVault ถือว่าท่านยอมรับข้อกำหนดการใช้งานทั้งหมด
-            หากไม่ยอมรับ กรุณาหยุดใช้งานเว็บไซต์ทันที
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">2. การสมัครสมาชิก</h2>
-          <p className="text-muted-foreground">
-            ผู้ใช้ต้องมีอายุ 15 ปีขึ้นไป ข้อมูลที่ให้ต้องเป็นความจริง ผู้ใช้รับผิดชอบในการรักษาความปลอดภัยของบัญชีตนเอง
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">3. การซื้อ-ขาย</h2>
-          <p className="text-muted-foreground">
-            CardVault เป็นเพียงตัวกลาง ไม่ได้เป็นผู้ขายสินค้า ผู้ขายรับผิดชอบคุณภาพและความถูกต้องของสินค้า
-            ระบบ Escrow คุ้มครองผู้ซื้อตามข้อกำหนดที่ระบุไว้
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">4. ค่าธรรมเนียม</h2>
-          <p className="text-muted-foreground">
-            ค่าธรรมเนียม platform 6% จากราคาขาย รวมค่าธรรมเนียมการชำระเงิน
-            ไม่มีค่าใช้จ่ายสำหรับผู้ซื้อ
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">5. ข้อห้าม</h2>
-          <p className="text-muted-foreground">
-            ห้ามลงขายสินค้าปลอม สินค้าผิดกฎหมาย หรือสินค้าที่ละเมิดลิขสิทธิ์
-            ห้ามใช้ platform เพื่อการฉ้อโกง หรือกิจกรรมที่ผิดกฎหมาย
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">6. การระงับบัญชี</h2>
-          <p className="text-muted-foreground">
-            CardVault สงวนสิทธิ์ในการระงับหรือลบบัญชีที่ละเมิดข้อกำหนด
-            โดยไม่ต้องแจ้งให้ทราบล่วงหน้า
-          </p>
-        </section>
-      </div>
+      <section className="max-w-3xl mx-auto px-4 py-16 space-y-8">
+        {[
+          {
+            title: "1. การยอมรับข้อกำหนด",
+            content: "การใช้งาน CardVault ถือว่าคุณยอมรับข้อกำหนดทั้งหมด หากไม่ยอมรับ กรุณาหยุดใช้งานทันที",
+          },
+          {
+            title: "2. บัญชีผู้ใช้",
+            content: "คุณต้องมีอายุอย่างน้อย 15 ปี ข้อมูลที่ให้ต้องเป็นความจริง คุณรับผิดชอบต่อความปลอดภัยของบัญชีตนเอง",
+          },
+          {
+            title: "3. การซื้อ-ขาย",
+            content: "ทุกธุรกรรมผ่านระบบ Escrow ผู้ขายต้องจัดส่งภายใน 48 ชั่วโมงหลังยืนยันออเดอร์ ผู้ซื้อมีเวลา 7 วันในการยืนยันรับสินค้าหรือแจ้งปัญหา",
+          },
+          {
+            title: "4. ค่าธรรมเนียม",
+            content: "Bronze: 5% | Silver: 4% | Gold: 3% | Pro: 2% ค่าธรรมเนียมจะถูกหักจากราคาขาย ไม่มีค่าสมัครสมาชิก",
+          },
+          {
+            title: "5. ข้อห้าม",
+            content: "ห้ามขายการ์ดปลอม ห้ามใช้ข้อมูลเท็จ ห้ามทุจริต ห้ามละเมิดทรัพย์สินทางปัญญา การละเมิดจะส่งผลให้ถูกระงับบัญชี",
+          },
+          {
+            title: "6. ข้อพิพาท",
+            content: "หากมีปัญหา แจ้งข้อพิพาทภายใน 7 วัน ทีมงานจะตรวจสอบและตัดสินภายใน 72 ชั่วโมง การตัดสินของทีมงานถือเป็นที่สิ้นสุด",
+          },
+          {
+            title: "7. การระงับบัญชี",
+            content: "CardVault สงวนสิทธิ์ในการระงับหรือลบบัญชีที่ละเมิดข้อกำหนด โดยไม่ต้องแจ้งล่วงหน้า",
+          },
+        ].map((section, i) => (
+          <div key={i}>
+            <h2 className="text-lg font-bold text-white mb-2">{section.title}</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">{section.content}</p>
+          </div>
+        ))}
+      </section>
     </div>
   )
 }

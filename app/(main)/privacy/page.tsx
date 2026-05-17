@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Lock } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "นโยบายความเป็นส่วนตัว | CardVault",
@@ -7,53 +8,88 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="container px-4 py-12 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">นโยบายความเป็นส่วนตัว</h1>
-      <p className="text-muted-foreground mb-8">อัปเดตล่าสุด: 17 พฤษภาคม 2569</p>
+    <div className="bg-zinc-950 min-h-screen">
+      <section className="relative py-20 border-b border-zinc-800">
+        <div className="relative max-w-3xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full text-sm text-amber-400 mb-6">
+            <Lock className="w-4 h-4" />
+            ความเป็นส่วนตัว
+          </div>
+          <h1 className="text-4xl font-extrabold text-white mb-4">นโยบายความเป็นส่วนตัว</h1>
+          <p className="text-sm text-zinc-500">อัปเดตล่าสุด: 17 พฤษภาคม 2569</p>
+        </div>
+      </section>
 
-      <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
-        <section>
-          <h2 className="text-xl font-semibold">1. ข้อมูลที่เรารวบรวม</h2>
-          <p className="text-muted-foreground">
-            ข้อมูลส่วนตัว: ชื่อ อีเมล เบอร์โทร ที่อยู่จัดส่ง<br />
-            ข้อมูลการชำระเงิน: ประวัติธุรกรรม (ไม่เก็บข้อมูลบัตรเครดิต)<br />
-            ข้อมูลอุปกรณ์: IP address, browser, OS
-          </p>
-        </section>
+      <section className="max-w-3xl mx-auto px-4 py-16 space-y-8">
+        {[
+          {
+            title: "ข้อมูลที่เราเก็บ",
+            items: [
+              "ชื่อ, อีเมล, เบอร์โทร (ตอนสมัคร)",
+              "ที่อยู่จัดส่ง (ตอนสั่งซื้อ)",
+              "ข้อมูลบัตรประชาชน (ตอนยืนยันตัวตน KYC)",
+              "ประวัติการซื้อ-ขาย และการใช้งาน",
+            ],
+          },
+          {
+            title: "วิธีใช้ข้อมูล",
+            items: [
+              "ประมวลผลธุรกรรมซื้อ-ขาย",
+              "ยืนยันตัวตนและป้องกันการทุจริต",
+              "ปรับปรุงบริการและประสบการณ์ผู้ใช้",
+              "ส่งข้อมูลข่าวสารและโปรโมชั่น (หากยินยอม)",
+            ],
+          },
+          {
+            title: "การเปิดเผยข้อมูล",
+            items: [
+              "ไม่เปิดเผยข้อมูลส่วนตัวให้บุคคลที่สาม ยกเว้น:",
+              "ผู้ขาย/ผู้ซื้อ (เฉพาะข้อมูลที่จำเป็นต่อธุรกรรม)",
+              "หน่วยงานราชการ (เมื่อกฎหมายกำหนด)",
+              "ผู้ให้บริการชำระเงิน (เพื่อประมวลผลธุรกรรม)",
+            ],
+          },
+          {
+            title: "ความปลอดภัย",
+            items: [
+              "เข้ารหัสข้อมูลทั้งหมดด้วย SSL/TLS",
+              "เก็บข้อมูลบัตรประชาชนในระบบที่เข้ารหัส",
+              "ไม่เก็บข้อมูลบัตรเครดิต/เดบิต",
+              "ตรวจสอบความปลอดภัยเป็นประจำ",
+            ],
+          },
+          {
+            title: "สิทธิ์ของคุณ",
+            items: [
+              "เข้าถึงและดาวน์โหลดข้อมูลส่วนตัว",
+              "แก้ไขหรือลบข้อมูลส่วนตัว",
+              "ถอนความยินยอมในการรับข่าวสาร",
+              "ขอลบบัญชีและข้อมูลทั้งหมด",
+            ],
+          },
+        ].map((section, i) => (
+          <div key={i}>
+            <h2 className="text-lg font-bold text-white mb-3">{section.title}</h2>
+            <ul className="space-y-2">
+              {section.items.map((item, j) => (
+                <li key={j} className="flex items-start gap-2 text-sm text-zinc-400">
+                  <span className="text-amber-400 mt-1">•</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
 
-        <section>
-          <h2 className="text-xl font-semibold">2. การใช้ข้อมูล</h2>
-          <p className="text-muted-foreground">
-            ใช้เพื่อให้บริการ ประมวลผลธุรกรรม ส่งการแจ้งเตือน ป้องกันการฉ้อโกง
-            และปรับปรุงประสบการณ์ผู้ใช้
+        <div className="bg-zinc-900 rounded-2xl p-6 border border-zinc-800">
+          <p className="text-sm text-zinc-400">
+            หากมีคำถามเกี่ยวกับนโยบายความเป็นส่วนตัว ติดต่อเราได้ที่{" "}
+            <a href="mailto:privacy@cardvault.co.th" className="text-amber-400 hover:underline">
+              privacy@cardvault.co.th
+            </a>
           </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">3. การเปิดเผยข้อมูล</h2>
-          <p className="text-muted-foreground">
-            ไม่เปิดเผยข้อมูลส่วนตัวแก่บุคคลที่สาม ยกเว้น:<br />
-            - ผู้ขาย/ผู้ซื้อ (ข้อมูลที่จำเป็นต่อธุรกรรม)<br />
-            - ผู้ให้บริการชำระเงิน (Omise)<br />
-            - ตามกฎหมายกำหนด
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">4. ความปลอดภัย</h2>
-          <p className="text-muted-foreground">
-            ใช้ HTTPS, เข้ารหัสข้อมูล, มีระบบ rate limiting และ monitoring
-            เพื่อป้องกันการเข้าถึงข้อมูลโดยไม่ได้รับอนุญาต
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold">5. สิทธิ์ของผู้ใช้</h2>
-          <p className="text-muted-foreground">
-            สามารถขอดู แก้ไข หรือลบข้อมูลส่วนตัวได้ โดยติดต่อ support@cardvault.co.th
-          </p>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
   )
 }

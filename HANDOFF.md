@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 19:36 GMT+8
+> **Last updated:** 2026-05-17 19:48 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Latest commit:** `e62112f` (feat: redesign hero card stack — premium cinematic floating cards)
+> **Latest commit:** `4a2e254` (fix: hero cards — dominant center, tighter overlap, cinematic depth)
 > **Branch:** `main` — clean, up to date with origin
 > **Build status:** ✅ `npm run build` passes
 
@@ -71,15 +71,17 @@
 ### UI Redesign (10 pages done)
 Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)
 
-### Hero Card Stack Redesign (commit `e62112f`)
+### Hero Card Stack Redesign (commits `e62112f` → `4a2e254`)
 | # | Change | Details |
 |---|---|---|
 | 1 | Removed Framer Motion | Pure CSS keyframes for animations |
-| 2 | Ambient glow layer | Purple glow left + gold glow center + purple glow right (radial gradients with blur) |
-| 3 | 3-card depth layout | Left (-12deg, behind), Center (front, largest), Right (12deg, behind) |
-| 4 | Cinematic float animation | 5-6s ease-in-out infinite, 18px translateY |
-| 5 | Subtle hover effects | translateY(-6px) + scale(1.01) + stronger glow |
-| 6 | Premium aesthetic | Dark luxury gaming feel, no glassmorphism, no rainbow effects |
+| 2 | Ambient glow layer | Soft purple left + amber center + purple right (radial gradients, blur 100-120px) |
+| 3 | Dominant center card | Center 360px, sides 230px — clear visual hierarchy |
+| 4 | Tight overlap | Side cards positioned inward via negative margins, stacked composition |
+| 5 | Cinematic float | 5-6s ease-in-out, subtle rotate (±10-12deg) + scale (0.92-1.015) |
+| 6 | Depth hierarchy | Sides opacity 0.92, center 1 — sides slightly darker |
+| 7 | Atmospheric glow | Soft blurred ambient light, not neon outlines |
+| 8 | Subtle hover | translateY(-8px) + tiny scale + stronger glow, no aggressive transforms |
 
 ### Community/Forum API Fix (commit `d47b9be`)
 | # | Fix | Details |

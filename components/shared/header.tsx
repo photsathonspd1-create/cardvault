@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils"
 
 const NAV_LINKS = [
   { href: "/", label: "หน้าแรก" },
-  { href: "/browse", label: "ซื้อการ์ด" },
-  { href: "/sell/new", label: "ลงขายการ์ด" },
-  { href: "/browse?sort=popular", label: "ซีรีส์การ์ด" },
-  { href: "/how-it-works", label: "เกี่ยวกับเรา" },
+  { href: "/browse", label: "ซื้อของ" },
+  { href: "/sell/new", label: "ขายของ" },
+  { href: "/how-it-works", label: "วิธีใช้งาน" },
+  { href: "/community", label: "เขียนกับเรา" },
 ]
 
 export function Header() {
@@ -145,6 +145,9 @@ export function Header() {
                   <Link href="/orders">
                     <Button variant="ghost" size="icon" className="relative text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg">
                       <ShoppingCart className="w-5 h-5" />
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 rounded-full text-[9px] font-bold text-black flex items-center justify-center">
+                        1
+                      </span>
                     </Button>
                   </Link>
 

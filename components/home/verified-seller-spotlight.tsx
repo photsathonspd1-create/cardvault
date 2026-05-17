@@ -123,6 +123,20 @@ export async function VerifiedSellerSpotlight() {
                     <p className="text-[10px] text-zinc-500">rating</p>
                   </div>
                 </div>
+                {/* Star rating visual */}
+                <div className="flex items-center justify-center gap-0.5 mt-2">
+                  {Array.from({ length: 5 }).map((_, si) => (
+                    <Star
+                      key={si}
+                      className={cn(
+                        "w-3 h-3",
+                        si < Math.round(seller.rating)
+                          ? "fill-amber-400 text-amber-400"
+                          : "fill-zinc-700 text-zinc-700"
+                      )}
+                    />
+                  ))}
+                </div>
               </div>
             </Link>
           )

@@ -10,6 +10,7 @@ import { StatsCounter } from "@/components/home/stats-counter"
 import { ScammerCheckBar } from "@/components/home/scammer-check-bar"
 import { CategorySection } from "@/components/home/category-section"
 import { HotThisWeek } from "@/components/home/hot-this-week"
+import { CardSpotlight } from "@/components/home/card-spotlight"
 import { VerifiedSellerSpotlight } from "@/components/home/verified-seller-spotlight"
 import { LiveToast } from "@/components/home/live-toast"
 import { ListingCard } from "@/components/listing/listing-card"
@@ -215,6 +216,9 @@ export default async function HomePage() {
 
       {/* ===== CATEGORY SECTION ===== */}
       <CategorySection categoryCounts={categoryCounts} />
+
+      {/* ===== CARD SPOTLIGHT ===== */}
+      <CardSpotlight />
 
       {/* ===== LISTINGS + HOT SECTION ===== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">

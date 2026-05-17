@@ -8,6 +8,15 @@
 
 import { supabaseAdmin } from "./supabase-client"
 
+// Simple CUID generator (Prisma-compatible format: "c" + 24 chars)
+function cuid(): string {
+  const timestamp = Date.now().toString(36)
+  const random = Math.random().toString(36).substring(2, 10)
+  const counter = (globalThis.__cuidCounter = ((globalThis.__cuidCounter as number) || 0) + 1)
+  const counterStr = counter.toString(36).padStart(4, "0")
+  return `c${timestamp}${random}${counterStr}`.substring(0, 25)
+}
+
 // Lazy getters — deferred to first use so edge bundling doesn't crash
 function getSupabaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -1423,6 +1432,11 @@ function createModelProxy(modelName: string) {
 
       const { simple, nested } = extractData(inputData)
 
+      // Auto-generate ID if not provided (Prisma @default(cuid()))
+      if (!simple.id) {
+        simple.id = cuid()
+      }
+
       // Handle nested creates (e.g., images: { create: [...] })
       const nestedCreates: Record<string, unknown[]> = {}
       for (const [key, val] of Object.entries(nested)) {
@@ -1461,8 +1475,10 @@ function createModelProxy(modelName: string) {
         const fkKeyLower = `${table.charAt(0).toLowerCase() + table.slice(1)}Id`
 
         for (const item of items as Record<string, unknown>[]) {
+          const itemWithId = { ...item }
+          if (!itemWithId.id) itemWithId.id = cuid()
           const insertItem = {
-            ...convertDates(item as Record<string, unknown>),
+            ...convertDates(itemWithId as Record<string, unknown>),
           }
           // Try to find the FK — look for common patterns
           // If the item doesn't already have a foreign key, add it
@@ -1499,6 +1515,7 @@ function createModelProxy(modelName: string) {
       }
 
       const insertData = inputData.map((d) => {
+        if (!d.id) d.id = cuid()
         if (!d.createdAt) d.createdAt = new Date()
         if (!d.updatedAt) d.updatedAt = new Date()
         return convertDates(d)
@@ -1564,7 +1581,9 @@ function createModelProxy(modelName: string) {
           const fkKeyLower = `${table.charAt(0).toLowerCase() + table.slice(1)}Id`
 
           for (const item of items as Record<string, unknown>[]) {
-            const insertItem = convertDates(item as Record<string, unknown>)
+            const itemWithId = { ...item }
+            if (!itemWithId.id) itemWithId.id = cuid()
+            const insertItem = convertDates(itemWithId as Record<string, unknown>)
             if (!(fkKeyLower in insertItem) && data) {
               insertItem[fkKeyLower] = data.id
             }

@@ -91,10 +91,6 @@ export default async function HomePage() {
                 action="/browse"
                 method="get"
                 className="flex max-w-xl mx-auto lg:mx-0"
-                onSubmit={(e) => {
-                  const input = e.currentTarget.querySelector("input[name=q]") as HTMLInputElement
-                  if (!input?.value.trim()) e.preventDefault()
-                }}
               >
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />

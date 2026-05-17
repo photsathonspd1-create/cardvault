@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic"
 
 export default async function SellerOrdersPage() {
   const session = await auth()
-  const userId = (session!.user as any).id
+  const userId = (session?.user as any)?.id
 
   const orders = await prisma.order.findMany({
     where: { sellerId: userId },
@@ -60,7 +60,7 @@ export default async function SellerOrdersPage() {
                       </p>
                       <h3 className="font-medium">{order.cardName}</h3>
                       <p className="text-sm text-muted-foreground">
-                        ผู้ซื้อ: {order.buyer.name} • {getRelativeTime(order.createdAt)}
+                        ผู้ซื้อ: {order.buyer?.name ?? "-"} • {getRelativeTime(order.createdAt)}
                       </p>
                     </div>
                     <Badge variant={statusVariant}>

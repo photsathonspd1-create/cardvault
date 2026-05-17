@@ -323,7 +323,7 @@ function ListingCard({ listing }: { listing: Record<string, unknown> }) {
             </span>
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            โดย {(listing as any).seller.user.name}
+            โดย {(listing as any).seller?.user?.name ?? (listing as any).seller?.displayName ?? "ผู้ขาย"}
           </p>
         </CardContent>
       </Card>

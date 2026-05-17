@@ -93,11 +93,11 @@ export default async function AdminDisputesPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                     <div>
                       <span className="text-muted-foreground">ผู้ร้องเรียน:</span>{" "}
-                      {dispute.raisedBy.name}
+                      {dispute.raisedBy?.name ?? "-"}
                     </div>
                     <div>
                       <span className="text-muted-foreground">ผู้ขาย:</span>{" "}
-                      {dispute.order.seller.name}
+                      {dispute.order?.seller?.name ?? "-"}
                     </div>
                   </div>
 

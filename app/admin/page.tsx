@@ -108,7 +108,7 @@ export default async function AdminDashboardPage() {
                 <div>
                   <p className="font-medium text-sm">{order.cardName}</p>
                   <p className="text-xs text-muted-foreground">
-                    ผู้ซื้อ: {order.buyer.name} • ผู้ขาย: {order.seller.name}
+                    ผู้ซื้อ: {order.buyer?.name ?? "-"} • ผู้ขาย: {order.seller?.name ?? "-"}
                   </p>
                 </div>
                 <div className="text-right">

@@ -98,8 +98,8 @@ export default async function AdminKycPage() {
                       <User className="h-5 w-5 text-purple-400" />
                     </div>
                     <div>
-                      <p className="font-semibold">{seller.user.name}</p>
-                      <p className="text-xs text-muted-foreground">@{seller.user.username} • {seller.user.email}</p>
+                      <p className="font-semibold">{seller.user?.name ?? "-"}</p>
+                      <p className="text-xs text-muted-foreground">@{seller.user?.username ?? "-"} • {seller.user?.email ?? "-"}</p>
                     </div>
                   </CardTitle>
                   <Badge variant="warning"><Clock className="h-3 w-3 mr-1" />รอตรวจสอบ</Badge>
@@ -164,8 +164,8 @@ export default async function AdminKycPage() {
                     <div className="flex items-center gap-3">
                       <Shield className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm font-medium">{seller.user.name}</p>
-                        <p className="text-xs text-muted-foreground">@{seller.user.username}</p>
+                        <p className="text-sm font-medium">{seller.user?.name ?? "-"}</p>
+                        <p className="text-xs text-muted-foreground">@{seller.user?.username ?? "-"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

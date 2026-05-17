@@ -63,7 +63,7 @@ export default async function AdminListingsPage() {
                   <div className="flex-1">
                     <h3 className="font-medium">{listing.customName ?? "Untitled"}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {SERIES_LABELS[listing.series]} • {listing.condition} • โดย {listing.seller.user.name}
+                      {SERIES_LABELS[listing.series]} • {listing.condition} • โดย {listing.seller?.user?.name ?? "ผู้ขาย"}
                     </p>
                     <p className="text-gold font-bold mt-1">{formatPrice(listing.price)}</p>
                     {listing.description && (
@@ -126,7 +126,7 @@ export default async function AdminListingsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{listing.customName ?? "Untitled"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {listing.seller.user.name} • {getRelativeTime(listing.createdAt)}
+                        {listing.seller?.user?.name ?? "ผู้ขาย"} • {getRelativeTime(listing.createdAt)}
                       </p>
                     </div>
                     <span className="font-medium text-gold text-sm">{formatPrice(listing.price)}</span>

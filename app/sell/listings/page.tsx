@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"
 
 export default async function SellerListingsPage() {
   const session = await auth()
-  const userId = (session!.user as any).id
+  const userId = (session?.user as any)?.id
 
   const sellerProfile = await prisma.sellerProfile.findUnique({
     where: { userId },

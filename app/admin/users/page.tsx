@@ -71,7 +71,7 @@ export default async function AdminUsersPage() {
                     ออเดอร์ซื้อ: {user._count.buyerOrders} •
                     ออเดอร์ขาย: {user._count.sellerOrders}
                     {user.sellerProfile && (
-                      <> • ระดับ: {user.sellerProfile.tier} • ขาย: {user.sellerProfile.totalSales} • ★ {user.sellerProfile.rating.toFixed(1)}</>
+                      <> • ระดับ: {user.sellerProfile?.tier ?? "-"} • ขาย: {user.sellerProfile?.totalSales ?? 0} • ★ {user.sellerProfile?.rating?.toFixed(1) ?? "0"}</>
                     )}
                   </p>
                 </div>

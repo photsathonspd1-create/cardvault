@@ -20,7 +20,10 @@ export const dynamic = "force-dynamic"
 
 export default async function SellDashboardPage() {
   const session = await auth()
-  const userId = (session!.user as any).id
+  if (!session?.user) {
+    return <div className="text-center py-20"><p>กรุณาเข้าสู่ระบบ</p></div>
+  }
+  const userId = (session.user as any).id
 
   // Get or create seller profile
   let sellerProfile = await prisma.sellerProfile.findUnique({
@@ -28,12 +31,17 @@ export default async function SellDashboardPage() {
   })
 
   if (!sellerProfile) {
-    sellerProfile = await prisma.sellerProfile.create({
-      data: {
-        userId,
-        displayName: (session!.user as any).name ?? "Seller",
-      },
-    })
+    try {
+      sellerProfile = await prisma.sellerProfile.create({
+        data: {
+          userId,
+          displayName: (session.user as any).name ?? "Seller",
+        },
+      })
+    } catch (e) {
+      console.error("Failed to create SellerProfile:", e)
+      return <div className="text-center py-20"><p>เกิดข้อผิดพลาดในการสร้างโปรไฟล์ผู้ขาย กรุณาลองใหม่</p></div>
+    }
   }
 
   // Get stats
@@ -56,7 +64,7 @@ export default async function SellDashboardPage() {
       },
       orderBy: { createdAt: "desc" },
       take: 5,
-    }),
+    }).catch(() => []),
   ])
 
   return (
@@ -184,7 +192,7 @@ export default async function SellDashboardPage() {
                       {order.cardName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ผู้ซื้อ: {order.buyer.name} • {formatPrice(order.totalAmount)}
+                      ผู้ซื้อ: {order.buyer?.name ?? "-"} • {formatPrice(order.totalAmount)}
                     </p>
                   </div>
                   <Badge

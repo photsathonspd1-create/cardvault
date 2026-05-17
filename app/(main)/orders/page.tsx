@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic"
 
 export default async function OrdersPage() {
   const session = await auth()
-  const userId = (session!.user as any).id
+  const userId = (session?.user as any)?.id
 
   const orders = await prisma.order.findMany({
     where: { buyerId: userId },

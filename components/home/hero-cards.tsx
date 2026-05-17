@@ -2,157 +2,185 @@
 
 import Image from "next/image"
 
-const CARDS = [
-  {
-    src: "https://images.pokemontcg.io/swsh12/44_hires.png",
-    alt: "Pikachu VMAX",
-    position: "left",
-  },
-  {
-    src: "https://images.pokemontcg.io/swsh4/20_hires.png",
-    alt: "Charizard VMAX",
-    position: "center",
-  },
-  {
-    src: "https://images.pokemontcg.io/swsh9/79_hires.png",
-    alt: "Mewtwo V",
-    position: "right",
-  },
-]
-
 export function HeroCards() {
   return (
     <>
       <style jsx global>{`
         @keyframes hero-float-left {
-          0%, 100% { transform: translateY(0px) rotate(-12deg); }
-          50% { transform: translateY(-18px) rotate(-12deg); }
+          0%, 100% {
+            transform: translateY(0px) rotate(-12deg) scale(0.92);
+          }
+          50% {
+            transform: translateY(-18px) rotate(-10deg) scale(0.935);
+          }
         }
         @keyframes hero-float-center {
-          0%, 100% { transform: translateX(-50%) translateY(0px); }
-          50% { transform: translateX(-50%) translateY(-18px); }
+          0%, 100% {
+            transform: translateX(-50%) translateY(0px) scale(1);
+          }
+          50% {
+            transform: translateX(-50%) translateY(-14px) scale(1.015);
+          }
         }
         @keyframes hero-float-right {
-          0%, 100% { transform: translateY(0px) rotate(12deg); }
-          50% { transform: translateY(-18px) rotate(12deg); }
+          0%, 100% {
+            transform: translateY(0px) rotate(12deg) scale(0.92);
+          }
+          50% {
+            transform: translateY(-18px) rotate(10deg) scale(0.935);
+          }
         }
 
-        .hero-card-wrapper {
-          transition: filter 0.35s ease;
-        }
-        .hero-card-inner {
-          transition: transform 0.35s ease;
-          cursor: pointer;
+        .hero-card {
+          transition: transform 0.4s ease, filter 0.4s ease;
+          will-change: transform, filter;
         }
 
-        /* Left card */
-        .hero-pos-left {
-          left: 10%;
-          top: 12%;
-          width: clamp(140px, 18vw, 200px);
-          animation: hero-float-left 6s ease-in-out infinite;
-          filter: drop-shadow(0 0 40px rgba(124,58,237,0.5));
-          z-index: 10;
-        }
-        .hero-pos-left:hover {
-          filter: drop-shadow(0 0 60px rgba(124,58,237,0.7));
-        }
-        .hero-pos-left:hover .hero-card-inner {
-          transform: translateY(-6px) scale(1.01);
-        }
-
-        /* Center card */
-        .hero-pos-center {
+        .hero-card-left {
           left: 50%;
-          top: 0%;
-          width: clamp(180px, 22vw, 280px);
-          animation: hero-float-center 5s ease-in-out infinite;
-          filter: drop-shadow(0 0 50px rgba(245,158,11,0.6));
-          z-index: 30;
+          top: 28px;
+          margin-left: -310px;
+          width: 230px;
+          opacity: 0.92;
+          z-index: 10;
+          animation: hero-float-left 6s ease-in-out infinite;
+          filter: drop-shadow(0 0 60px rgba(124,58,237,0.35))
+                  drop-shadow(0 8px 32px rgba(0,0,0,0.5));
         }
-        .hero-pos-center:hover {
-          filter: drop-shadow(0 0 65px rgba(245,158,11,0.75));
-        }
-        .hero-pos-center:hover .hero-card-inner {
-          transform: translateY(-6px) scale(1.01);
+        .hero-card-left:hover {
+          transform: translateY(-8px) rotate(-12deg) scale(0.94);
+          filter: drop-shadow(0 0 80px rgba(124,58,237,0.5))
+                  drop-shadow(0 12px 40px rgba(0,0,0,0.6));
         }
 
-        /* Right card */
-        .hero-pos-right {
-          right: 10%;
-          top: 12%;
-          width: clamp(140px, 18vw, 200px);
-          animation: hero-float-right 6s ease-in-out infinite;
-          filter: drop-shadow(0 0 40px rgba(124,58,237,0.5));
+        .hero-card-center {
+          left: 50%;
+          top: 0;
+          width: 360px;
+          opacity: 1;
+          z-index: 30;
+          animation: hero-float-center 5s ease-in-out infinite;
+          filter: drop-shadow(0 0 70px rgba(245,158,11,0.3))
+                  drop-shadow(0 12px 48px rgba(0,0,0,0.6));
+        }
+        .hero-card-center:hover {
+          transform: translateX(-50%) translateY(-8px) scale(1.01);
+          filter: drop-shadow(0 0 90px rgba(245,158,11,0.45))
+                  drop-shadow(0 16px 56px rgba(0,0,0,0.7));
+        }
+
+        .hero-card-right {
+          left: 50%;
+          top: 28px;
+          margin-left: 80px;
+          width: 230px;
+          opacity: 0.92;
           z-index: 10;
+          animation: hero-float-right 6s ease-in-out infinite;
+          filter: drop-shadow(0 0 60px rgba(124,58,237,0.35))
+                  drop-shadow(0 8px 32px rgba(0,0,0,0.5));
         }
-        .hero-pos-right:hover {
-          filter: drop-shadow(0 0 60px rgba(124,58,237,0.7));
+        .hero-card-right:hover {
+          transform: translateY(-8px) rotate(12deg) scale(0.94);
+          filter: drop-shadow(0 0 80px rgba(124,58,237,0.5))
+                  drop-shadow(0 12px 40px rgba(0,0,0,0.6));
         }
-        .hero-pos-right:hover .hero-card-inner {
-          transform: translateY(-6px) scale(1.01);
+
+        @media (max-width: 768px) {
+          .hero-card-left {
+            width: 140px;
+            margin-left: -190px;
+            top: 40px;
+          }
+          .hero-card-center {
+            width: 220px;
+          }
+          .hero-card-right {
+            width: 140px;
+            margin-left: 50px;
+            top: 40px;
+          }
         }
       `}</style>
 
-      <div className="relative w-full h-[340px] md:h-[440px] overflow-hidden">
-        {/* ── Ambient glow layer ── */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Purple glow — left */}
+      <div className="relative w-full h-[380px] md:h-[460px]">
+        {/* ── Ambient glow — soft, atmospheric ── */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Purple — left side */}
           <div
-            className="absolute rounded-full opacity-40"
+            className="absolute"
             style={{
-              width: 320,
-              height: 320,
-              left: "8%",
-              top: "15%",
-              background: "radial-gradient(circle, rgba(124,58,237,0.5) 0%, transparent 70%)",
+              width: 400,
+              height: 400,
+              left: "15%",
+              top: "10%",
+              background: "radial-gradient(ellipse, rgba(124,58,237,0.25) 0%, transparent 70%)",
               filter: "blur(100px)",
             }}
           />
-          {/* Gold glow — center-right */}
+          {/* Amber — center */}
           <div
-            className="absolute rounded-full opacity-30"
+            className="absolute"
             style={{
-              width: 380,
-              height: 380,
-              left: "45%",
-              top: "10%",
-              background: "radial-gradient(circle, rgba(245,158,11,0.4) 0%, transparent 70%)",
+              width: 500,
+              height: 500,
+              left: "50%",
+              top: "5%",
+              transform: "translateX(-50%)",
+              background: "radial-gradient(ellipse, rgba(245,158,11,0.2) 0%, transparent 70%)",
               filter: "blur(120px)",
             }}
           />
-          {/* Soft purple glow — right */}
+          {/* Purple — right side */}
           <div
-            className="absolute rounded-full opacity-25"
+            className="absolute"
             style={{
-              width: 260,
-              height: 260,
-              right: "5%",
-              top: "20%",
-              background: "radial-gradient(circle, rgba(124,58,237,0.35) 0%, transparent 70%)",
-              filter: "blur(80px)",
+              width: 350,
+              height: 350,
+              right: "10%",
+              top: "15%",
+              background: "radial-gradient(ellipse, rgba(124,58,237,0.2) 0%, transparent 70%)",
+              filter: "blur(100px)",
             }}
           />
         </div>
 
         {/* ── Cards ── */}
-        {CARDS.map((card) => (
-          <div
-            key={card.alt}
-            className={`hero-card-wrapper hero-pos-${card.position} absolute`}
-          >
-            <div className="hero-card-inner">
-              <Image
-                src={card.src}
-                alt={card.alt}
-                width={300}
-                height={420}
-                className="rounded-3xl w-full h-auto"
-                priority={card.position === "center"}
-              />
-            </div>
+        <div className="absolute inset-0">
+          {/* LEFT — behind, tilted left */}
+          <div className="hero-card hero-card-left absolute">
+            <Image
+              src="https://images.pokemontcg.io/swsh12/44_hires.png"
+              alt="Pikachu VMAX"
+              width={460}
+              height={640}
+              className="rounded-3xl w-full h-auto"
+            />
           </div>
-        ))}
+
+          {/* CENTER — dominant, front */}
+          <div className="hero-card hero-card-center absolute">
+            <Image
+              src="https://images.pokemontcg.io/swsh4/20_hires.png"
+              alt="Charizard VMAX"
+              width={720}
+              height={1008}
+              className="rounded-3xl w-full h-auto"
+              priority
+            />
+          </div>
+
+          {/* RIGHT — behind, tilted right */}
+          <div className="hero-card hero-card-right absolute">
+            <Image
+              src="https://images.pokemontcg.io/swsh9/79_hires.png"
+              alt="Mewtwo V"
+              width={460}
+              height={640}
+              className="rounded-3xl w-full h-auto"
+            />
+          </div>
+        </div>
       </div>
     </>
   )

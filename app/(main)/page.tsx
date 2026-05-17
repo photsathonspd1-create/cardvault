@@ -30,6 +30,24 @@ export default async function HomePage() {
   const totalUsers = await prisma.user.count()
   const totalOrders = await prisma.order.count({ where: { status: "COMPLETED" } })
 
+  // Category counts
+  const categoryCountsRaw = await prisma.cardCatalog.groupBy({
+    by: ["series"],
+    _count: { id: true },
+  })
+  const categoryCounts = { POKEMON: 0, YUGIOH: 0, MTG: 0, ONE_PIECE: 0 }
+  for (const row of categoryCountsRaw) {
+    if (row.series in categoryCounts) {
+      ;(categoryCounts as Record<string, number>)[row.series] = row._count.id
+    }
+  }
+
+  // Scammer report count
+  let scammerCount = 0
+  try {
+    scammerCount = await (prisma as any).scammerReport.count()
+  } catch { scammerCount = 0 }
+
   return (
     <div className="bg-zinc-950">
       {/* ===== HERO SECTION ===== */}
@@ -120,19 +138,19 @@ export default async function HomePage() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-6 pt-4 max-w-md mx-auto lg:mx-0">
                 <StatsCounter
-                  end={580}
+                  end={totalListings}
                   suffix="+"
                   label="รายการการ์ด"
                   icon={<Sparkles className="w-5 h-5" />}
                 />
                 <StatsCounter
-                  end={2350}
+                  end={totalUsers}
                   suffix="+"
                   label="สมาชิกทั้งหมด"
                   icon={<ShieldCheck className="w-5 h-5" />}
                 />
                 <StatsCounter
-                  end={99}
+                  end={totalOrders > 0 ? Math.min(99, Math.round((totalOrders / Math.max(totalOrders, 1)) * 100)) : 0}
                   suffix="%"
                   label="Dispute Resolved"
                   icon={<RotateCcw className="w-5 h-5" />}
@@ -149,10 +167,10 @@ export default async function HomePage() {
       </section>
 
       {/* ===== SCAMMER CHECK BAR ===== */}
-      <ScammerCheckBar />
+      <ScammerCheckBar scammerCount={scammerCount} />
 
       {/* ===== CATEGORY SECTION ===== */}
-      <CategorySection />
+      <CategorySection categoryCounts={categoryCounts} />
 
       {/* ===== LISTINGS + HOT SECTION ===== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
@@ -192,29 +210,28 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <StatsCounter
-              end={125000}
+              end={totalListings}
               suffix="+"
               label="การ์ดทั้งหมดในระบบ"
               icon={<span className="text-xl">🃏</span>}
             />
             <StatsCounter
-              end={89000}
+              end={totalOrders}
               suffix="+"
               label="ซื้อขายสำเร็จ"
               icon={<span className="text-xl">✅</span>}
             />
             <StatsCounter
-              end={45}
-              suffix=".2M+"
-              prefix="฿"
-              label="มูลค่าซื้อขายรวม"
-              icon={<span className="text-xl">💰</span>}
-            />
-            <StatsCounter
-              end={2300}
+              end={totalUsers}
               suffix="+"
               label="สมาชิกไว้วางใจ"
               icon={<span className="text-xl">👥</span>}
+            />
+            <StatsCounter
+              end={totalListings}
+              suffix="+"
+              label="รายการขาย"
+              icon={<span className="text-xl">💰</span>}
             />
           </div>
         </div>

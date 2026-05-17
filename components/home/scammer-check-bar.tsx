@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Shield, Search } from "lucide-react"
 
-export function ScammerCheckBar() {
+export function ScammerCheckBar({ scammerCount = 0 }: { scammerCount?: number }) {
   const [query, setQuery] = useState("")
 
   return (
@@ -45,7 +45,7 @@ export function ScammerCheckBar() {
 
           {/* Right */}
           <div className="text-right shrink-0">
-            <div className="text-3xl font-bold text-amber-400">12,450</div>
+            <div className="text-3xl font-bold text-amber-400">{scammerCount.toLocaleString()}</div>
             <div className="text-xs text-zinc-400">รายชื่อในระบบ</div>
             <div className="text-[10px] text-green-400 mt-0.5">อัพเดทล่าสุดวันนี้ ✅</div>
           </div>

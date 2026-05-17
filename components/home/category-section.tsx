@@ -4,34 +4,39 @@ import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
 
+interface CategoryCount {
+  POKEMON: number
+  YUGIOH: number
+  MTG: number
+  ONE_PIECE: number
+}
+
 const CATEGORIES = [
   {
-    series: "POKEMON",
+    series: "POKEMON" as const,
     name: "Pokemon",
     image: "https://images.pokemontcg.io/swsh4/20_hires.png",
-    count: "2,450+",
   },
   {
-    series: "YUGIOH",
+    series: "YUGIOH" as const,
     name: "Yu-Gi-Oh!",
     image: "https://images.pokemontcg.io/xy12/1_hires.png",
-    count: "1,820+",
   },
   {
-    series: "MTG",
+    series: "MTG" as const,
     name: "Magic: The Gathering",
     image: "https://images.pokemontcg.io/sm12/1_hires.png",
-    count: "980+",
   },
   {
-    series: "ONE_PIECE",
+    series: "ONE_PIECE" as const,
     name: "One Piece",
     image: "https://images.pokemontcg.io/swsh11/1_hires.png",
-    count: "1,350+",
   },
 ]
 
-export function CategorySection() {
+export function CategorySection({ categoryCounts }: { categoryCounts?: CategoryCount }) {
+  const counts = categoryCounts ?? { POKEMON: 0, YUGIOH: 0, MTG: 0, ONE_PIECE: 0 }
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
       <div className="flex items-center justify-between mb-8">
@@ -67,7 +72,7 @@ export function CategorySection() {
                 {/* Content */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
                   <h3 className="text-white font-bold text-sm md:text-base">{cat.name}</h3>
-                  <p className="text-amber-400 text-xs mt-0.5">{cat.count} รายการ</p>
+                  <p className="text-amber-400 text-xs mt-0.5">{counts[cat.series]} รายการ</p>
                 </div>
               </div>
             </Link>

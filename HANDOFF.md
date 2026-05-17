@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 15:01 GMT+8
+> **Last updated:** 2026-05-17 15:12 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live:** https://cardvault-drab.vercel.app/
-> **Latest commit:** `7a9be7f` (fix: unwrap one-to-one PostgREST arrays + process nested _count)
+> **Latest commit:** `83a9530` (feat: settings page + user profile API)
 
 ---
 
@@ -53,6 +53,7 @@
 | 12 | Duplicate email service | `lib/email.ts` re-exports from `lib/resend.ts` | `lib/email.ts`, `lib/resend.ts` |
 | 13 | PostgREST inserts missing createdAt/updatedAt defaults | Added defaults before insert | `lib/prisma.ts` |
 | 14 | **Profile page crash** — PostgREST returns 1:1 relations (SellerProfile) as arrays | Added `unwrapOneToOneArrays()` to convert single-element arrays to objects; added `processNestedCounts()` for `_count` inside nested includes | `lib/prisma.ts` |
+| 15 | Settings page missing (404) | Created `/settings` page + `GET/PATCH /api/users/me` endpoint | `app/(main)/settings/page.tsx`, `app/api/users/me/route.ts` |
 
 ### UI Redesign (10 pages done)
 Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)

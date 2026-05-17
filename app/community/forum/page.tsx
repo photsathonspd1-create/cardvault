@@ -112,7 +112,7 @@ export default async function ForumPage() {
                           </p>
                           <p className="text-xs text-muted-foreground">
                             โดย {thread.author.name} •{" "}
-                            {thread.createdAt.toLocaleDateString("th-TH")}
+                            {new Date(thread.createdAt).toLocaleDateString("th-TH")}
                           </p>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">

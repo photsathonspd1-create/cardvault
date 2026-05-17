@@ -47,7 +47,7 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
 
   const listings = user.sellerProfile
     ? await prisma.listing.findMany({
-        where: { sellerId: user.sellerProfile.id, status: "ACTIVE" },
+        where: { sellerId: user.sellerProfile?.id, status: "ACTIVE" },
         include: { images: { take: 1, orderBy: { order: "asc" } } },
         orderBy: { createdAt: "desc" },
         take: 12,
@@ -74,18 +74,18 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 {sp && (
                   <>
-                    <Badge variant="gold">{sp.tier}</Badge>
+                    <Badge variant="gold">{sp?.tier ?? "BRONZE"}</Badge>
                     {sp.isKycVerified && <Badge variant="success">✓ Verified</Badge>}
                     {sp.rating > 0 && (
                       <span className="flex items-center gap-1 text-sm">
                         <Star className="h-4 w-4 fill-gold text-gold" />
-                        {sp.rating.toFixed(1)} ({sp.ratingCount} รีวิว)
+                        {sp?.rating?.toFixed(1) ?? "0"} ({sp?.ratingCount ?? 0} รีวิว)
                       </span>
                     )}
                   </>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  สมาชิกตั้งแต่ {user.createdAt.toLocaleDateString("th-TH", { year: "numeric", month: "long" })}
+                  สมาชิกตั้งแต่ {new Date(user.createdAt).toLocaleDateString("th-TH", { year: "numeric", month: "long" })}
                 </span>
               </div>
               {sp?.bio && (

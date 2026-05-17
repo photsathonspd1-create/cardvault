@@ -119,7 +119,7 @@ export default async function SellerOrdersPage() {
                         <span className="font-mono">{order.trackingNumber}</span>
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {order.shippingProvider} • ส่งเมื่อ {order.shippedAt?.toLocaleDateString("th-TH")}
+                        {order.shippingProvider} • ส่งเมื่อ {order.shippedAt ? new Date(order.shippedAt).toLocaleDateString("th-TH") : "-"}
                       </p>
                     </div>
                   )}

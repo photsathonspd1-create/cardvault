@@ -152,7 +152,7 @@ export default async function SellDashboardPage() {
               <div>
                 <p className="font-medium">ระดับผู้ขาย</p>
                 <p className="text-sm text-muted-foreground">
-                  {sellerProfile.completedOrders} ออเดอร์สำเร็จ • {sellerProfile.rating.toFixed(1)} ★
+                  {sellerProfile.completedOrders} ออเดอร์สำเร็จ • {Number(sellerProfile.rating ?? 0).toFixed(1)} ★
                 </p>
               </div>
             </div>

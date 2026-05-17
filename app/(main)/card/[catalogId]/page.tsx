@@ -165,7 +165,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
                 )}
                 {card.priceUpdatedAt && (
                   <p className="text-xs text-muted-foreground">
-                    อัพเดทล่าสุด: {card.priceUpdatedAt.toLocaleDateString("th-TH")}
+                    อัพเดทล่าสุด: {new Date(card.priceUpdatedAt).toLocaleDateString("th-TH")}
                   </p>
                 )}
               </CardContent>

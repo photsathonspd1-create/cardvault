@@ -51,7 +51,7 @@ export default async function SellerAnalyticsPage() {
   const monthlyMap = new Map<string, { revenue: number; orders: number }>()
   for (const order of orders) {
     if (!order.completedAt) continue
-    const monthKey = order.completedAt.toISOString().slice(0, 7) // YYYY-MM
+    const monthKey = new Date(order.completedAt).toISOString().slice(0, 7) // YYYY-MM
     const entry = monthlyMap.get(monthKey) ?? { revenue: 0, orders: 0 }
     entry.revenue += order.sellerReceives
     entry.orders++
@@ -142,7 +142,7 @@ export default async function SellerAnalyticsPage() {
               <div>
                 <span className="text-muted-foreground">คะแนน: </span>
                 <span className={tierProgress.requirements.rating.current >= tierProgress.requirements.rating.needed ? "text-green-400" : ""}>
-                  {tierProgress.requirements.rating.current.toFixed(1)} ★
+                  {Number(tierProgress.requirements.rating.current ?? 0).toFixed(1)} ★
                 </span>
                 <span className="text-muted-foreground"> / {tierProgress.requirements.rating.needed} ★</span>
               </div>

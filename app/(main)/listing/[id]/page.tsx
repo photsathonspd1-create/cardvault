@@ -359,7 +359,7 @@ async function PriceHistorySection({ cardId }: { cardId: string }) {
     if (history.length === 0) return null
 
     const data = history.map((h) => ({
-      date: h.recordedAt.toISOString().split("T")[0],
+      date: new Date(h.recordedAt).toISOString().split("T")[0],
       price: h.price / 100, // Convert satang to baht for display
     }))
 

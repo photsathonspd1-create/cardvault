@@ -108,29 +108,29 @@ export default async function ProfilePage() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">ระดับ</span>
-              <Badge variant="gold">{user.sellerProfile.tier}</Badge>
+              <Badge variant="gold">{user.sellerProfile?.tier ?? "BRONZE"}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">ยอดขายรวม</span>
               <span className="font-medium text-gold">
-                {formatPrice(user.sellerProfile.totalRevenue)}
+                {formatPrice(user.sellerProfile?.totalRevenue ?? 0)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">ออเดอร์สำเร็จ</span>
-              <span>{user.sellerProfile.completedOrders}</span>
+              <span>{user.sellerProfile?.completedOrders ?? 0}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">คะแนน</span>
               <span className="flex items-center gap-1">
                 <Star className="h-4 w-4 fill-gold text-gold" />
-                {user.sellerProfile.rating.toFixed(1)} ({user.sellerProfile.ratingCount})
+                {user.sellerProfile?.rating?.toFixed(1) ?? "0"} ({user.sellerProfile?.ratingCount ?? 0})
               </span>
             </div>
-            {user.sellerProfile.bio && (
+            {user.sellerProfile?.bio && (
               <div>
                 <p className="text-muted-foreground text-sm mb-1">เกี่ยวกับ</p>
-                <p className="text-sm">{user.sellerProfile.bio}</p>
+                <p className="text-sm">{user.sellerProfile?.bio}</p>
               </div>
             )}
             <Button variant="outline" className="w-full" asChild>

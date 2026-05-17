@@ -87,22 +87,6 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
             <Image
               src={card.imageUrlHi ?? card.imageUrl ?? "/placeholder-card.png"}
               alt={card.name ?? "Card"}
-
-  // Price stats
-  const prices = card.listings.map((l) => l.price)
-  const minPrice = prices.length > 0 ? Math.min(...prices) : null
-  const maxPrice = prices.length > 0 ? Math.max(...prices) : null
-  const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null
-
-  return (
-    <div className="container px-4 py-8">
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Left: Card Image */}
-        <div className="space-y-4">
-          <div className="relative aspect-[3/4] bg-muted rounded-lg overflow-hidden">
-            <Image
-              src={card.imageUrlHi ?? card.imageUrl}
-              alt={card.name}
               fill
               className="object-contain"
               sizes="(max-width: 1024px) 100vw, 33vw"
@@ -115,7 +99,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
         <div className="space-y-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant="purple">{SERIES_LABELS[card.series]}</Badge>
+              <Badge variant="purple">{SERIES_LABELS[card.series] ?? card.series}</Badge>
               {card.rarity && <Badge variant="gold">{card.rarity}</Badge>}
             </div>
             <h1 className="text-3xl font-bold">{card.name}</h1>
@@ -130,7 +114,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
             <CardContent className="p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ซีรีส์</span>
-                <span>{SERIES_LABELS[card.series]}</span>
+                <span>{SERIES_LABELS[card.series] ?? card.series}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">ชุด (Set)</span>
@@ -207,7 +191,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">รายการขาย</h2>
-            <Badge variant="secondary">{card.listings.length} รายการ</Badge>
+            <Badge variant="secondary">{card.listings?.length ?? 0} รายการ</Badge>
           </div>
 
           {/* Price Summary */}
@@ -234,7 +218,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
             </Card>
           )}
 
-          {card.listings.length === 0 ? (
+          {!card.listings || card.listings.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
@@ -260,11 +244,11 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary" className="text-[10px]">
-                              {CONDITION_LABELS[listing.condition]}
+                              {CONDITION_LABELS[listing.condition] ?? listing.condition}
                             </Badge>
-                            {listing.isGraded && (
+                            {listing.isGraded && listing.gradingCompany && (
                               <Badge variant="gold" className="text-[10px]">
-                                {listing.gradingCompany} {listing.gradeScore}
+                                {listing.gradingCompany}{listing.gradeScore ? ` ${listing.gradeScore}` : ""}
                               </Badge>
                             )}
                           </div>

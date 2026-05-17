@@ -181,6 +181,30 @@ const RELATION_MAP: Record<string, string> = {
   reporter: "User",
 }
 
+// PostgREST embed hints for ambiguous relationships (multiple relations → same table)
+// Key: parentTable → relationName → PostgREST constraint name
+const AMBIGUOUS_HINTS: Record<string, Record<string, string>> = {
+  Order: {
+    buyer: "Order_buyerId_fkey",
+    seller: "Order_sellerId_fkey",
+  },
+}
+
+// Per-relation FK overrides for cases where guessForeignKey can't determine the correct FK
+// because multiple relations from the same parent point to the same child table.
+// Key: parentTable → relationName → { table, fkColumn on child OR parentFk on parent }
+const RELATION_FK_HINTS: Record<string, Record<string, { fkColumn?: string; parentFk?: string }>> = {
+  User: {
+    buyerOrders: { fkColumn: "buyerId" },
+    sellerOrders: { fkColumn: "sellerId" },
+    reviewsGiven: { fkColumn: "reviewerId" },
+    reviewsReceived: { fkColumn: "revieweeId" },
+  },
+  Order: {
+    seller: { parentFk: "sellerId" },
+  },
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
 
 /** Convert a Prisma `where` clause into an array of PostgREST filter objects. */
@@ -399,14 +423,27 @@ function buildSelectStringSimple(
   if (!include) return "*"
 
   const parts: string[] = ["*"]
+  // Track tables already added to detect ambiguous relationships (same table, different relation)
+  const seenTables = new Map<string, string>() // tableName → firstRelationName
+
   for (const [relation, spec] of Object.entries(include)) {
     const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
     if (spec === true || spec === false) {
-      if (spec === true) parts.push(`${tableName}(*)`)
+      if (spec === true) {
+        const hint = AMBIGUOUS_HINTS[parentTable]?.[relation]
+        if (hint) {
+          parts.push(`${relation}:${tableName}!${hint}(*)`)
+        } else {
+          parts.push(`${tableName}(*)`)
+        }
+        seenTables.set(tableName, relation)
+      }
       continue
     }
     if (typeof spec === "object" && spec !== null) {
+      // _count: { select: { field: true } } — skip in select string, handled in fetchIncludes
       if (relation === "_count") continue
+
       const relSpec = spec as Record<string, unknown>
       const nestedInclude = relSpec.include as Record<string, unknown> | undefined
       const nestedSelect = relSpec.select as Record<string, unknown> | undefined
@@ -433,9 +470,21 @@ function buildSelectStringSimple(
             }
           }
         }
-        parts.push(`${tableName}(${innerParts.join(",")})`)
+        const hint = AMBIGUOUS_HINTS[parentTable]?.[relation]
+        if (hint) {
+          parts.push(`${relation}:${tableName}!${hint}(${innerParts.join(",")})`)
+        } else {
+          parts.push(`${tableName}(${innerParts.join(",")})`)
+        }
+        seenTables.set(tableName, relation)
       } else {
-        parts.push(`${tableName}(*)`)
+        const hint = AMBIGUOUS_HINTS[parentTable]?.[relation]
+        if (hint) {
+          parts.push(`${relation}:${tableName}!${hint}(*)`)
+        } else {
+          parts.push(`${tableName}(*)`)
+        }
+        seenTables.set(tableName, relation)
       }
     }
   }
@@ -456,9 +505,11 @@ function applyNestedTake(
 
     const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
     for (const row of rows) {
-      const val = row[tableName]
+      // Check relation name first (for aliased/ambiguous relations), then table name
+      const val = row[relation] ?? row[tableName]
       if (Array.isArray(val)) {
-        row[tableName] = val.slice(0, take)
+        const key = relation in row ? relation : tableName
+        row[key] = val.slice(0, take)
       }
     }
   }
@@ -489,12 +540,51 @@ async function fetchIncludes(
 ): Promise<Record<string, unknown>[]> {
   const result = rows.map((r) => ({ ...r }))
 
+  // Process _count entries: count child rows for each relation in _count.select
+  if (include._count && typeof include._count === "object") {
+    const countSpec = include._count as Record<string, unknown>
+    const countSelect = countSpec.select as Record<string, boolean> | undefined
+    if (countSelect) {
+      for (const row of result) {
+        if (!row._count) row._count = {} as Record<string, number>
+        for (const [countRelation, enabled] of Object.entries(countSelect)) {
+          if (!enabled) continue
+          const countTable = resolveRelation(parentTable, countRelation)
+          const fk = guessForeignKey(parentTable, countTable, countRelation)
+          let count = 0
+          if (fk.fkColumn) {
+            // FK on child table — count children where fkColumn = parent.id
+            const { count: c } = await supabaseAdmin
+              .from(countTable)
+              .select("id", { count: "exact", head: true })
+              .eq(fk.fkColumn, row.id)
+            count = c ?? 0
+          } else if (fk.parentFk) {
+            // FK on parent table — count children whose id = parent.parentFk
+            const fkVal = row[fk.parentFk]
+            if (fkVal) {
+              const { count: c } = await supabaseAdmin
+                .from(countTable)
+                .select("id", { count: "exact", head: true })
+                .eq("id", fkVal)
+              count = c ?? 0
+            }
+          }
+          ;(row._count as Record<string, number>)[countRelation] = count
+        }
+      }
+    }
+  }
+
   for (const [relation, spec] of Object.entries(include)) {
     if (relation === "_count") continue
     const tableName = resolveRelation(parentTable, relation)
+    // Use relation as the key for storing data (handles ambiguous cases where alias ≠ tableName)
+    const resultKey = relation
+
     if (typeof spec !== "object" || spec === null || spec === true || spec === false) {
       if (spec === true) {
-        const fk = guessForeignKey(parentTable, tableName)
+        const fk = guessForeignKey(parentTable, tableName, relation)
         const isSingle = isOneToOne(parentTable, tableName)
         if (isSingle && fk.parentFk) {
           const childIds = rows.map((r) => r[fk.parentFk!]).filter(Boolean)
@@ -502,7 +592,7 @@ async function fetchIncludes(
             const { data } = await supabaseAdmin.from(tableName).select("*").in("id", childIds)
             if (data) {
               const lookup = new Map(data.map((d: Record<string, unknown>) => [d.id, d]))
-              for (const row of result) { row[tableName] = lookup.get(row[fk.parentFk!]) ?? null }
+              for (const row of result) { row[resultKey] = lookup.get(row[fk.parentFk!]) ?? null }
             }
           }
         } else if (!isSingle && fk.fkColumn) {
@@ -511,7 +601,7 @@ async function fetchIncludes(
             const { data } = await supabaseAdmin.from(tableName).select("*").in(fk.fkColumn, parentIds)
             if (data) {
               for (const row of result) {
-                row[tableName] = data.filter((d: Record<string, unknown>) => d[fk.fkColumn!] === row.id)
+                row[resultKey] = data.filter((d: Record<string, unknown>) => d[fk.fkColumn!] === row.id)
               }
             }
           }
@@ -537,7 +627,7 @@ async function fetchIncludes(
     // Skip nested includes in the PostgREST select — fetch them separately below
     const pendingNested = nestedInclude || null
 
-    const fk = guessForeignKey(parentTable, tableName)
+    const fk = guessForeignKey(parentTable, tableName, relation)
     const isSingle = isOneToOne(parentTable, tableName)
 
     if (isSingle && fk.parentFk) {
@@ -548,7 +638,7 @@ async function fetchIncludes(
       if (data) {
         const lookup = new Map(data.map((d: Record<string, unknown>) => [d.id, d]))
         for (const row of result) {
-          row[tableName] = lookup.get(row[fk.parentFk!]) ?? null
+          row[resultKey] = lookup.get(row[fk.parentFk!]) ?? null
         }
       }
     } else if (!isSingle && fk.fkColumn) {
@@ -565,18 +655,18 @@ async function fetchIncludes(
         for (const row of result) {
           let related = data.filter((d: Record<string, unknown>) => d[fk.fkColumn!] === row.id)
           if (take !== undefined) related = related.slice(0, take)
-          row[tableName] = related
+          row[resultKey] = related
         }
       }
     } else {
       // Fallback: try both patterns
-      console.warn(`[supabase-db] No FK mapping for ${parentTable} → ${tableName}`)
+      console.warn(`[supabase-db] No FK mapping for ${parentTable} → ${tableName} (relation: ${relation})`)
     }
 
     // Fetch nested includes separately (e.g., User inside SellerProfile)
     if (pendingNested) {
       const nestedRows = result.flatMap((r) => {
-        const val = r[tableName]
+        const val = r[resultKey]
         return Array.isArray(val) ? val : val ? [val] : []
       }) as Record<string, unknown>[]
       if (nestedRows.length > 0) {
@@ -584,7 +674,7 @@ async function fetchIncludes(
           await fetchIncludes(tableName, nestedRows, pendingNested)
           // If one-to-one, reassign back
           if (isSingle) {
-            const val = result[0]?.[tableName]
+            const val = result[0]?.[resultKey]
             if (val && !Array.isArray(val)) {
               // Already mutated in-place since nestedRows contains the same object reference
             }
@@ -604,7 +694,15 @@ async function fetchIncludes(
  *  - fkColumn: column in the child table that holds the parent's id (for one-to-many)
  *  - parentFk: column in the parent table that holds the child's id (for one-to-one with FK on parent)
  */
-function guessForeignKey(parentTable: string, childTable: string): { fkColumn: string | null; parentFk: string | null } {
+function guessForeignKey(parentTable: string, childTable: string, relation?: string): { fkColumn: string | null; parentFk: string | null } {
+  // Check per-relation overrides first (for ambiguous relations like Order→buyer/seller)
+  if (relation) {
+    const hint = RELATION_FK_HINTS[parentTable]?.[relation]
+    if (hint) {
+      return { fkColumn: hint.fkColumn ?? null, parentFk: hint.parentFk ?? null }
+    }
+  }
+
   // fkColumn: column in CHILD table referencing parent.id
   const fkChild: Record<string, Record<string, string>> = {
     Listing: { ListingImage: "listingId", ShippingOption: "listingId", Order: "listingId" },
@@ -651,17 +749,22 @@ function buildSelectString(
     const tableName = resolveRelation(_model, relation)
 
     if (spec === true || spec === false) {
-      if (spec === true) parts.push(`${tableName}(*)`)
+      if (spec === true) {
+        const hint = AMBIGUOUS_HINTS[_model]?.[relation]
+        if (hint) {
+          parts.push(`${relation}:${tableName}!${hint}(*)`)
+        } else {
+          parts.push(`${tableName}(*)`)
+        }
+      }
       continue
     }
 
     if (typeof spec === "object" && spec !== null) {
       const relSpec = spec as Record<string, unknown>
 
-      // _count: { select: { field: true } }
+      // _count: { select: { field: true } } — skip in select string, handled in fetchIncludes
       if (relation === "_count") {
-        // PostgREST doesn't directly support _count in the same way.
-        // We'll handle this client-side or skip.
         continue
       }
 
@@ -708,7 +811,12 @@ function buildSelectString(
         }
 
         const inner = innerParts.length > 0 ? innerParts.join(",") : "*"
-        parts.push(`${tableName}(${inner})`)
+        const hint = AMBIGUOUS_HINTS[_model]?.[relation]
+        if (hint) {
+          parts.push(`${relation}:${tableName}!${hint}(${inner})`)
+        } else {
+          parts.push(`${tableName}(${inner})`)
+        }
       } else {
         // Simple include with take
         if (take !== undefined) extraParams[`${tableName}.limit`] = String(take)
@@ -716,7 +824,12 @@ function buildSelectString(
           const [field, dir] = Object.entries(orderBy)[0]
           extraParams[`${tableName}.order`] = `${field}.${dir}`
         }
-        parts.push(`${tableName}(*)`)
+        const hint = AMBIGUOUS_HINTS[_model]?.[relation]
+        if (hint) {
+          parts.push(`${relation}:${tableName}!${hint}(*)`)
+        } else {
+          parts.push(`${tableName}(*)`)
+        }
       }
     }
   }
@@ -1005,6 +1118,39 @@ function createModelProxy(modelName: string) {
       let result = data ?? []
       if (include && result.length > 0) {
         result = applyNestedTake(result, include, table)
+        // Process _count if present (not handled by PostgREST select)
+        if (include._count && typeof include._count === "object") {
+          const countSpec = include._count as Record<string, unknown>
+          const countSelect = countSpec.select as Record<string, boolean> | undefined
+          if (countSelect) {
+            for (const row of result) {
+              if (!row._count) row._count = {} as Record<string, number>
+              for (const [countRelation, enabled] of Object.entries(countSelect)) {
+                if (!enabled) continue
+                const countTable = resolveRelation(table, countRelation)
+                const fk = guessForeignKey(table, countTable, countRelation)
+                let count = 0
+                if (fk.fkColumn) {
+                  const { count: c } = await supabaseAdmin
+                    .from(countTable)
+                    .select("id", { count: "exact", head: true })
+                    .eq(fk.fkColumn, row.id)
+                  count = c ?? 0
+                } else if (fk.parentFk) {
+                  const fkVal = row[fk.parentFk]
+                  if (fkVal) {
+                    const { count: c } = await supabaseAdmin
+                      .from(countTable)
+                      .select("id", { count: "exact", head: true })
+                      .eq("id", fkVal)
+                    count = c ?? 0
+                  }
+                }
+                ;(row._count as Record<string, number>)[countRelation] = count
+              }
+            }
+          }
+        }
       }
       return result
     },
@@ -1051,6 +1197,37 @@ function createModelProxy(modelName: string) {
       let result = data[0]
       if (include) {
         result = applyNestedTake([result], include, table)[0]
+        // Process _count if present (not handled by PostgREST select)
+        if (include._count && typeof include._count === "object") {
+          const countSpec = include._count as Record<string, unknown>
+          const countSelect = countSpec.select as Record<string, boolean> | undefined
+          if (countSelect) {
+            if (!result._count) result._count = {} as Record<string, number>
+            for (const [countRelation, enabled] of Object.entries(countSelect)) {
+              if (!enabled) continue
+              const countTable = resolveRelation(table, countRelation)
+              const fk = guessForeignKey(table, countTable, countRelation)
+              let count = 0
+              if (fk.fkColumn) {
+                const { count: c } = await supabaseAdmin
+                  .from(countTable)
+                  .select("id", { count: "exact", head: true })
+                  .eq(fk.fkColumn, result.id)
+                count = c ?? 0
+              } else if (fk.parentFk) {
+                const fkVal = result[fk.parentFk]
+                if (fkVal) {
+                  const { count: c } = await supabaseAdmin
+                    .from(countTable)
+                    .select("id", { count: "exact", head: true })
+                    .eq("id", fkVal)
+                  count = c ?? 0
+                }
+              }
+              ;(result._count as Record<string, number>)[countRelation] = count
+            }
+          }
+        }
       }
       return result
     },

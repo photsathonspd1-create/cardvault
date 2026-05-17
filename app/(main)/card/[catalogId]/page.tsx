@@ -239,7 +239,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            โดย {listing.seller.user.name}
+                            โดย {listing.seller?.user?.name ?? "ผู้ขาย"}
                           </p>
                         </div>
                         <div className="text-right">

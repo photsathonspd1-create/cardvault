@@ -178,12 +178,12 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={review.reviewer.avatar ?? undefined} />
                       <AvatarFallback className="bg-muted text-xs">
-                        {getInitials(review.reviewer.name)}
+                        {getInitials(review.reviewer?.name ?? "-")}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{review.reviewer.name}</span>
+                        <span className="font-medium text-sm">{review.reviewer?.name ?? "-"}</span>
                         <div className="flex">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star

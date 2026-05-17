@@ -2,29 +2,30 @@ import { NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 
 /**
- * Get user ID from session — tries auth() first, then falls back to JWT cookie decode.
- * This is needed because auth() in API route handlers on Netlify sometimes doesn't
- * receive the request context properly (NextAuth v5 beta issue).
+ * Get user ID from session.
+ * Tries auth() first. If it fails (known NextAuth v5 beta issue on Netlify
+ * where auth() doesn't get request context in API routes), falls back to
+ * calling the internal session endpoint.
  */
 export async function getUserId(request: NextRequest): Promise<string | null> {
+  // Try auth() first (works in server components, sometimes works in API routes)
   try {
     const session = await auth()
     const id = (session?.user as { id?: string })?.id
     if (id) return id
   } catch {}
 
-  // Fallback: decode JWT cookie directly
+  // Fallback: call the internal session endpoint with the request cookies
   try {
-    const token =
-      request.cookies.get("authjs.session-token")?.value ||
-      request.cookies.get("next-auth.session-token")?.value ||
-      request.cookies.get("__Secure-authjs.session-token")?.value
-    if (token) {
-      const parts = token.split(".")
-      if (parts.length === 3) {
-        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
-        const payload = JSON.parse(atob(b64))
-        return ((payload.sub || payload.id) as string) || null
+    const cookieHeader = request.headers.get("cookie") || ""
+    if (cookieHeader) {
+      const baseUrl = process.env.NEXTAUTH_URL || "https://cardvault-tcg.netlify.app"
+      const res = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { cookie: cookieHeader },
+      })
+      if (res.ok) {
+        const session = await res.json()
+        if (session?.user?.id) return session.user.id as string
       }
     }
   } catch {}
@@ -33,36 +34,26 @@ export async function getUserId(request: NextRequest): Promise<string | null> {
 }
 
 /**
- * Get full session (with role, etc.) — tries auth() first, then falls back to JWT decode.
+ * Get full session (with role, etc.)
  */
 export async function getSession(request: NextRequest) {
+  // Try auth() first
   try {
     const session = await auth()
     if (session?.user) return session
   } catch {}
 
-  // Fallback: decode JWT cookie directly
+  // Fallback: call the internal session endpoint
   try {
-    const token =
-      request.cookies.get("authjs.session-token")?.value ||
-      request.cookies.get("next-auth.session-token")?.value ||
-      request.cookies.get("__Secure-authjs.session-token")?.value
-    if (token) {
-      const parts = token.split(".")
-      if (parts.length === 3) {
-        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
-        const payload = JSON.parse(atob(b64))
-        const userId = (payload.sub || payload.id) as string
-        if (userId) {
-          return {
-            user: {
-              id: userId,
-              role: payload.role as string,
-              email: payload.email as string,
-              name: payload.name as string,
-            },
-          }
-        }
+    const cookieHeader = request.headers.get("cookie") || ""
+    if (cookieHeader) {
+      const baseUrl = process.env.NEXTAUTH_URL || "https://cardvault-tcg.netlify.app"
+      const res = await fetch(`${baseUrl}/api/auth/session`, {
+        headers: { cookie: cookieHeader },
+      })
+      if (res.ok) {
+        const session = await res.json()
+        if (session?.user) return session
       }
     }
   } catch {}

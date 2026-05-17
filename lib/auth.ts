@@ -2,7 +2,15 @@ import NextAuth from "next-auth"
 import type { OAuthConfig, OAuthUserConfig } from "next-auth/providers"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
-import bcrypt from "bcryptjs"
+
+// Lazy-load bcryptjs to avoid Edge/bundling issues
+let _bcrypt: typeof import("bcryptjs") | null = null
+async function getBcrypt() {
+  if (!_bcrypt) {
+    _bcrypt = await import("bcryptjs")
+  }
+  return _bcrypt
+}
 
 /**
  * LINE OAuth Provider (custom, since next-auth doesn't ship a LINE provider)
@@ -79,6 +87,7 @@ const providers: Provider[] = [
         throw new Error("บัญชีนี้ถูกระงับการใช้งาน")
       }
 
+      const bcrypt = await getBcrypt()
       const isPasswordValid = await bcrypt.compare(
         credentials.password as string,
         user.passwordHash

@@ -17,7 +17,7 @@ export default async function ListingPage({ params }: ListingPageProps) {
       images: { orderBy: { order: "asc" } },
       seller: {
         include: {
-          user: { select: { name: true, username: true, image: true } },
+          user: { select: { name: true, username: true, avatar: true } },
         },
       },
       card: true,

@@ -28,10 +28,24 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     where.condition = searchParams.condition
   }
   if (searchParams.q) {
-    where.OR = [
-      { customName: { contains: searchParams.q, mode: "insensitive" } },
-      { card: { name: { contains: searchParams.q, mode: "insensitive" } } },
-    ]
+    // Search in customName and card names
+    const matchingCards = await prisma.cardCatalog.findMany({
+      where: { name: { contains: searchParams.q, mode: "insensitive" } },
+      select: { id: true },
+      take: 50,
+    })
+    const cardIds = matchingCards.map((c: any) => c.id)
+
+    if (cardIds.length > 0) {
+      where.OR = [
+        { customName: { contains: searchParams.q, mode: "insensitive" } },
+        { cardId: { in: cardIds } },
+      ]
+    } else {
+      where.OR = [
+        { customName: { contains: searchParams.q, mode: "insensitive" } },
+      ]
+    }
   }
 
   // Sort

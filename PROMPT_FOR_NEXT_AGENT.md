@@ -1,343 +1,254 @@
-# CardVault — Complete Agent Prompt
+# CardVault — Agent Handoff Prompt (2026-05-17 18:45 GMT+8)
 
-> **Copy this entire document to your next agent session.**
-> It contains everything you need to pick up where the previous agent left off.
+> **คัดลอกทั้งหมดนี้ไปให้ agent ตัวถัดไปได้เลย**
+> อัพเดทล่าสุดหลัง homepage redesign + Netlify deploy สำเร็จ
 
 ---
 
-## 🎯 สรุปสั้นๆ
+## 🎯 สรุปโปรเจกต์
 
-คุณกำลังทำงานบน **CardVault** — ตลาดซื้อ-ขายการ์ด TCG ออนไลน์อันดับ 1 ของไทย (Pokemon, Yu-Gi-Oh!, MTG, One Piece, Vanguard)
+**CardVault** — ตลาดซื้อ-ขายการ์ด TCG อันดับ 1 ของไทย (Pokemon, Yu-Gi-Oh!, MTG, One Piece, Vanguard)
 
-**สถานะปัจจุบัน:** เว็บ UI ใช้ได้ครบทุกหน้า แต่ยังซื้อ-ขายจริงไม่ได้ (ไม่มี payment, upload, email)
-**สิ่งที่ต้องทำต่อ:** แก้ NextAuth บน Netlify → เพิ่ม Omise payment → R2 upload → Resend email
+- **Live:** https://cardvault-tcg.netlify.app
+- **Repo:** https://github.com/photsathonspd1-create/cardvault
+- **Latest commit:** `3c836fe` (docs: update HANDOFF.md)
+- **Build status:** ✅ `npm run build` ผ่าน
+- **Deploy:** Netlify (manual deploy, ไม่ใช่ auto-deploy จาก GitHub)
 
 ---
 
 ## 🔗 URLs & Credentials
 
 ```
-# Live Sites
-Netlify (active):    https://cardvault-tcg.netlify.app
-Vercel (paused):     https://cardvault-drab.vercel.app  (deploy limit 100/day, resets ~2026-05-18 15:00)
+# Live
+Netlify:            https://cardvault-tcg.netlify.app
 
 # Repo
-GitHub:              https://github.com/photsathonspd1-create/cardvault
+GitHub:             https://github.com/photsathonspd1-create/cardvault
 
 # Dashboards
-Netlify Dashboard:   https://app.netlify.com/sites/cardvault-tcg
-Vercel Dashboard:    https://vercel.com/dashboard
-Supabase Dashboard:  https://supabase.com/dashboard/project/ruugptsudyxyozywevcu
+Netlify Dashboard:  https://app.netlify.com/projects/cardvault-tcg
+Supabase Dashboard: https://supabase.com/dashboard/project/ruugptsudyxyozywevcu
 
-# Credentials (ask human if missing)
-GitHub PAT:          <ask human>
-Netlify Token:       nfp_LK6qKSRUtEaxHYJVVRyZXXC3j4qhYeEiac86
-Netlify Site ID:     8dcb5718-5634-4c41-939b-7d229bca2aab
-Vercel Token:        <ask human>
-Vercel Project ID:   prj_FoW9G9bBDARIEK573IjP1ZDYwAZU
-Supabase URL:        https://ruugptsudyxyozywevcu.supabase.co
-Supabase Project:    ruugptsudyxyozywevcu
-Supabase Key:        <in env vars — check Netlify/Vercel dashboard>
+# ⚠️ สำคัญ: Netlify ไม่ได้เชื่อม GitHub → ไม่มี auto-deploy!
+# ต้อง deploy ด้วย CLI ทุกครั้ง (ดูหัวข้อ Deploy Flow)
+
+# Credentials
+GitHub PAT:         <ถาม human>
+Netlify Token:      nfp_LK6qKSRUtEaxHYJVVRyZXXC3j4qhYeEiac86
+Netlify Site ID:    8dcb5718-5634-4c41-939b-7d229bca2aab
+Supabase URL:       https://ruugptsudyxyozywevcu.supabase.co
+Supabase Project:   ruugptsudyxyozywevcu
+Supabase Key:       <อยู่ใน Netlify env vars — ไปดูที่ dashboard>
+```
+
+---
+
+## ⚠️ สิ่งที่ต้องรู้ก่อนเริ่มทำงาน
+
+### 1. Netlify ไม่มี Auto-Deploy จาก GitHub
+
+**ปัญหา:** Netlify site ไม่ได้เชื่อมกับ GitHub repo → `git push` อย่างเดียวไม่ deploy
+
+**วิธี deploy (ต้องทำทุกครั้ง):**
+```bash
+# 1. Build ก่อน
+cat > .env << 'ENVEOF'
+DATABASE_URL="postgresql://postgres:<password>@db.ruugptsudyxyozywevcu.supabase.co:5432/postgres"
+DIRECT_URL="postgresql://postgres:<password>@db.ruugptsudyxyozywevcu.supabase.co:5432/postgres"
+NEXTAUTH_URL="https://cardvault-tcg.netlify.app"
+NEXTAUTH_SECRET="<from netlify env>"
+NEXT_PUBLIC_SUPABASE_URL="https://ruugptsudyxyozywevcu.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="<from netlify env>"
+NEXT_PUBLIC_APP_URL="https://cardvault-tcg.netlify.app"
+ENVEOF
+
+# 2. Build
+npm run build
+
+# 3. Deploy ด้วย Netlify CLI
+npm install -g netlify-cli  # ถ้ายังไม่มี
+NETLIFY_AUTH_TOKEN=nfp_LK6qKSRUtEaxHYJVVRyZXXC3j4qhYeEiac86 \
+NETLIFY_SITE_ID=8dcb5718-5634-4c41-939b-7d229bca2aab \
+netlify deploy --prod --dir=.next
+
+# 4. ลบ .env (ห้าม commit)
+rm -f .env
+```
+
+**⚠️ .env อยู่ใน .gitignore แล้ว — ห้าม commit secrets เด็ดขาด**
+
+### 2. ต้องมี .env ก่อน Build
+
+`npm run build` จะ fail ถ้าไม่มี `.env` เพราะ Prisma client ต้อง connect DB ตอน build
+
+### 3. Prisma Proxy — ความเสี่ยงอันดับ 1
+
+**ไฟล์:** `lib/prisma.ts` (~2200 บรรทัด)
+**หน้าที่:** แปลง Prisma queries → Supabase PostgREST calls
+
+ข้อจำกัด:
+- `$transaction` ไม่ใช่ real transaction — แค่ sequential calls
+- `$queryRaw` / `$queryRawUnsafe` ไม่รองรับ
+- Nested `orderBy` ใน includes ไม่รองรับ
+- `increment`/`decrement` ทำ read-then-write (race condition)
+- One-to-one relations กลับมาเป็น array → ต้องใช้ `unwrapOneToOneArrays()`
+
+**วิธี debug:**
+```bash
+# ลอง query ตรงกับ Supabase PostgREST
+curl -s "https://ruugptsudyxyozywevcu.supabase.co/rest/v1/TableName?select=*" \
+  -H "apikey: <SUPABASE_KEY>" \
+  -H "Authorization: Bearer <SUPABASE_KEY>"
 ```
 
 ---
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology | Notes |
-|---|---|---|
-| Framework | Next.js 14 App Router | `app/` directory, RSC, Server Actions |
-| Styling | Tailwind CSS + shadcn/ui | Components in `components/ui/` |
-| Animation | Framer Motion | Used on homepage, cards |
-| Database | Supabase PostgreSQL | Accessed via **custom Prisma proxy** |
-| ORM | Prisma (proxy) | `lib/prisma.ts` — translates to PostgREST |
-| Auth | NextAuth v5 beta | Credentials + LINE OAuth |
-| Payment | Omise | PromptPay QR + Credit Card (**NOT CONFIGURED**) |
-| Storage | Cloudflare R2 | S3-compatible (**NOT CONFIGURED**) |
-| Email | Resend | (**NOT CONFIGURED**) |
-| OCR | Tesseract.js | Card scanner (crashes on serverless, has fallback) |
-| Rate Limit | Upstash Redis | Or in-memory fallback |
-| Charts | Recharts | Price history, analytics |
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 14 App Router (`app/` directory, RSC) |
+| Styling | Tailwind CSS + shadcn/ui |
+| Animation | Framer Motion |
+| Database | Supabase PostgreSQL (via custom Prisma proxy) |
+| Auth | NextAuth v5 beta (Credentials + LINE OAuth) |
+| Payment | Omise — **NOT CONFIGURED** (code พร้อมใน `lib/omise.ts`) |
+| Storage | Cloudflare R2 — **NOT CONFIGURED** (code พร้อมใน `lib/r2.ts`) |
+| Email | Resend — **NOT CONFIGURED** (templates พร้อมใน `lib/resend.ts`) |
+| OCR | Tesseract.js (fallback ถ้า crash บน serverless) |
 
 ---
 
-## ⚠️ CRITICAL: Prisma Proxy
+## 📁 โครงสร้างไฟล์หลัก
 
-**ไฟล์:** `lib/prisma.ts` (~2200 บรรทัด)
-**หน้าที่:** แปลง Prisma queries → Supabase PostgREST calls
-
-**นี่คือความเสี่ยงอันดับ 1 ของโปรเจคนี้** — ทุก query ที่ใช้ `prisma.model.findMany(...)` ผ่าน proxy นี้
-
-### ข้อจำกัดที่รู้จัก:
-- `$transaction` ไม่ใช่ real transaction — แค่ sequential calls
-- `$queryRaw` / `$queryRawUnsafe` ไม่รองรับ
-- Nested `orderBy` ใน includes ไม่รองรับ (ใช้ได้แค่ `take`)
-- `increment`/`decrement` ทำ read-then-write (race condition ได้)
-- `_count` ใน nested includes ต้องใช้ `processNestedCounts()` ที่เพิ่มมา
-- One-to-one relations กลับมาเป็น array จาก PostgREST → ต้องใช้ `unwrapOneToOneArrays()`
-
-### ฟังก์ชันหลักใน proxy:
 ```
-buildSelectStringSimple()  — สร้าง PostgREST select string จาก Prisma include/select
-buildPostgrestFilters()    — แปลง Prisma where → PostgREST filter params
-remapTableKeys()           — PascalCase → camelCase (SellerProfile → sellerProfile)
-unwrapOneToOneArrays()     — แปลง array เป็น object สำหรับ one-to-one
-processNestedCounts()      — จัดการ _count ใน nested includes
-fetchIncludes()            — Fallback: ดึง nested data แยก (ใช้เมื่อ PostgREST fail)
-postgrestFetch()           — Raw fetch ไป Supabase PostgREST
-```
+app/(main)/page.tsx              — Homepage (real DB data, spotlight, hot index, live toast)
+app/(main)/browse/page.tsx       — Browse listings
+app/(main)/listing/[id]/         — Listing detail
+app/(main)/check/                — Scammer check
+app/(main)/profile/              — User profile
+app/(main)/settings/             — Account settings
+app/(main)/orders/               — Orders list + detail
+app/(main)/community/            — Community + forum
+app/sell/                        — Seller dashboard + new listing wizard
+app/admin/                       — Admin panel
+app/api/auth/[...nextauth]/      — NextAuth handler
+app/api/listings/                — Listings API
+app/api/orders/                  — Orders API
+app/api/users/me/                — Own profile GET/PATCH
+app/api/payments/charge/         — Payment (needs Omise keys)
+app/api/webhooks/omise/          — Payment webhook
+app/api/cron/escrow-release/     — Auto-release cron
+app/api/upload/                  — File upload (mock + real)
 
-### วิธี debug เมื่อ query ไม่ทำงาน:
-1. เช็ค Vercel/Netlify function logs
-2. ลอง query ตรงกับ Supabase PostgREST:
-   ```bash
-   curl -s "https://ruugptsudyxyozywevcu.supabase.co/rest/v1/TableName?select=*" \
-     -H "apikey: <SUPABASE_KEY>" \
-     -H "Authorization: Bearer <SUPABASE_KEY>"
-   ```
-3. ดูว่า `buildSelectStringSimple()` สร้าง select string ถูกมั้ย
-4. เช็คว่า `remapTableKeys()` remap ชื่อถูกมั้ย
+components/shared/header.tsx     — Navbar (หน้าแรก, ซื้อของ, ขายของ, วิธีใช้งาน, เขียนกับเรา)
+components/shared/mobile-bottom-nav.tsx — Mobile bottom nav (5 tabs)
+components/home/hero-cards.tsx   — 3 floating Pokemon cards
+components/home/card-spotlight.tsx — สปอตไลท์ (recommended cards + price trends)
+components/home/hot-this-week.tsx — ดัชนี Hot (price up/down tabs)
+components/home/category-section.tsx — 4 category cards (Pokemon, YGO, MTG, One Piece)
+components/home/scammer-check-bar.tsx — Scammer check input + count
+components/home/verified-seller-spotlight.tsx — Top 4 sellers with star ratings
+components/home/live-toast.tsx   — Bottom-left toast cycling completed orders
+components/home/stats-counter.tsx — Animated counter
+components/listing/listing-card.tsx — Listing card component
+
+lib/prisma.ts                    — ⚠️ Custom Prisma→PostgREST proxy (~2200 lines)
+lib/auth.ts                      — NextAuth config
+lib/supabase-client.ts           — Supabase admin client
+lib/utils.ts                     — formatPrice, getRelativeTime, SERIES_LABELS, etc.
+lib/design-tokens.ts             — UI tokens (colors, effects, animations)
+lib/omise.ts                     — Payment client (ready for keys)
+lib/r2.ts                        — Storage client (ready for keys)
+lib/resend.ts                    — Email templates + sender
+lib/rate-limit.ts                — Rate limiting
+
+middleware.ts                    — Route protection (uses JWT decode, not bcrypt)
+prisma/schema.prisma             — Full DB schema (all models + enums)
+prisma/seed.ts                   — Seed data
+netlify.toml                     — Netlify build config
+```
 
 ---
 
-## ✅ สิ่งที่เสร็จแล้ว (15 bug fixes)
+## ✅ สิ่งที่เสร็จแล้ว
 
-| # | ปัญหา | แก้ไข | ไฟล์ |
+### Homepage (redesign ตาม reference image)
+- ✅ Hero: Badge + H1 gradient + Search + Trending pills + Trust badges + Stats (ข้อมูลจริง)
+- ✅ 3 floating Pokemon cards (Framer Motion)
+- ✅ Scammer Check Bar — input + จำนวน records จาก DB
+- ✅ Categories — 4 cards (Pokemon, YGO, MTG, One Piece) รูปจาก URL จริง
+- ✅ สปอตไลท์ — recommended cards + price trend arrows (up/down %)
+- ✅ ลงขายล่าสุด — 6 listings จาก DB
+- ✅ ดัชนี Hot — tabs "ราคาขึ้น" / "ราคาลง" (PriceHistory 7 วัน)
+- ✅ Verified Seller Spotlight — 4 sellers + star ratings
+- ✅ Live Toast — cycle order ล่าสุดทุก 5 วินาที
+- ✅ Stats Footer — CardCatalog count, completed orders, total value (baht), users
+
+### Navbar
+- ✅ Logo: shield สีทอง + "CardVault"
+- ✅ Nav: หน้าแรก, ซื้อของ, ขายของ, วิธีใช้งาน, เขียนกับเรา
+- ✅ Search bar
+- ✅ ตรวจสอบผู้ขาย button + Cart (badge) + Bell + Avatar
+- ✅ Mobile drawer + Mobile bottom nav (5 tabs)
+
+### Bug Fixes (16+)
+- ✅ Prisma proxy: key remapping, nested includes, OR filters, cuid generation, one-to-one arrays
+- ✅ NextAuth: trustHost, secret, bcrypt edge fix, lazy-load, auth-helpers fallback
+- ✅ Register: null ID fix, OR filter format
+- ✅ Profile crash, Settings 404, Debug endpoint auth, etc.
+
+### Auth
+- ✅ NextAuth working on Netlify (trustHost + secret + auth-helpers fallback)
+- ✅ Credentials provider (email + password)
+- ✅ LINE OAuth (code ready, needs LINE_CLIENT_ID/SECRET)
+- ✅ Register API (`POST /api/auth/register`)
+- ✅ Middleware route protection (JWT decode, not bcrypt)
+
+### Other
+- ✅ 25+ pages (all return 200)
+- ✅ Scammer check system
+- ✅ Community + Forum
+- ✅ Admin panel
+- ✅ Seller dashboard + new listing wizard
+- ✅ Order detail + escrow status
+
+---
+
+## 🔴 สิ่งที่ต้องทำต่อ
+
+### Priority 1 — Critical for Launch
+
+| # | Task | Status | รายละเอียด |
 |---|---|---|---|
-| 1 | PostgREST ส่ง PascalCase แต่ frontend คาด camelCase | `remapTableKeys()` | `lib/prisma.ts` |
-| 2 | Homepage crash — orderBy ใน nested include | เอา orderBy ออก | `app/(main)/page.tsx` |
-| 3 | Register 500 — OR filter ผิด format | แยกเป็น 2 findUnique | `app/api/auth/register/route.ts` |
-| 4 | Nested select ขาด `*` | เพิ่ม `*` ใน innerParts | `lib/prisma.ts` |
-| 5 | OR filter `or=(a),(b)` แทน `or=(a,b)` | เปลี่ยน join separator | `lib/prisma.ts` |
-| 6 | Debug endpoint เปิด public | เพิ่ม auth check (ADMIN only) | `app/api/debug/route.ts` |
-| 7 | Hardcoded secrets เป็น fallback | ลบออก, throw ถ้าไม่มี env var | `lib/prisma.ts`, `lib/supabase-client.ts` |
-| 8 | Escrow cron ตรวจแค่ Bearer | รับทั้ง Bearer + x-vercel-cron-secret | `app/api/cron/escrow-release/route.ts` |
-| 9 | Tesseract.js crash บน serverless | Try-catch fallback | `services/card-identify.service.ts` |
-| 10 | Mock upload handler ไม่มี | สร้าง `/api/upload/mock` | `app/api/upload/mock/route.ts` |
-| 11 | Checkout ไม่ตรวจ auth | เพิ่ม redirect UI | `app/(main)/checkout/[listingId]/page.tsx` |
-| 12 | Email service ซ้ำกัน | รวมเป็น lib/resend.ts | `lib/email.ts`, `lib/resend.ts` |
-| 13 | PostgREST insert ขาด defaults | เพิ่ม createdAt/updatedAt | `lib/prisma.ts` |
-| 14 | **Profile crash** — 1:1 relation เป็น array | `unwrapOneToOneArrays()` + `processNestedCounts()` | `lib/prisma.ts` |
-| 15 | **Settings 404** | สร้าง /settings + PATCH /api/users/me | `app/(main)/settings/page.tsx` |
+| 1 | **Omise Payment** | ❌ ไม่มี keys | สมัคร omise.co → รับ keys → ตั้ง env vars → ทดสอบ PromptPay QR |
+| 2 | **R2 Storage** | ❌ ไม่มี keys | สร้าง Cloudflare R2 bucket → API token → custom domain |
+| 3 | **Resend Email** | ❌ ไม่มี keys | สมัคร resend.com → verify domain → ตั้ง env vars |
+| 4 | **CRON_SECRET** | ❌ ไม่ได้ตั้ง | `openssl rand -hex 32` → ตั้งใน env vars (สำหรับ escrow auto-release) |
+| 5 | **Login E2E Test** | ⚠️ ยังไม่ได้ทดสอบ | ลอง login จริงๆ ว่า NextAuth ทำงานมั้ย |
 
-### UI ที่เสร็จแล้ว (10 pages redesigned):
-Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)
+### Priority 2 — Important
 
-### Design System:
-```
-Background:   #09090b (zinc-950)
-Accent:       #F59E0B (amber-500)
-Purple:       #7C3AED
-Font Thai:    Sarabun
-Font Latin:   Inter
-Theme:        "Dark Gaming Luxury" — Steam meets Binance meets Japanese card shop
-Tokens:       lib/design-tokens.ts, tailwind.config.ts, app/globals.css
-```
+| # | Task | Status |
+|---|---|---|
+| 6 | Card Scanner camera UI | 🔧 Partial |
+| 7 | Price History charts | 🔧 Partial (Recharts installed, needs real data) |
+| 8 | Community/Forum seed data | ❌ Empty |
+| 9 | Image domains config | ❌ next.config.js needs remotePatterns |
+| 10 | Netlify auto-deploy from GitHub | ❌ ต้อง link repo ใน Netlify dashboard |
+
+### Priority 3 — Nice to Have
+
+| # | Task |
+|---|---|
+| 11 | Chat/Messaging |
+| 12 | Watchlist |
+| 13 | Notifications UI |
 
 ---
 
-## 🔴 สิ่งที่ต้องทำต่อ (เรียงตามความสำคัญ)
-
-### 1. NextAuth บน Netlify — พังอยู่ (สำคัญที่สุด)
-
-**ปัญหา:** `/api/auth/session` return 500 บน Netlify Login/register น่าจะไม่ทำงาน
-
-**สาเหตุ:** NextAuth edge runtime + Netlify edge functions ไม่เข้ากัน
-- `middleware.ts` import `auth` จาก `lib/auth.ts` → import `prisma` → import `supabase-client`
-- Netlify แปลง middleware เป็น edge function → ตอน bundle ไม่มี env vars → crash
-
-**วิธีแก้ที่ลองได้:**
-1. **Option A:** ย้าย auth check ออกจาก middleware → ใช้ server component check แทน
-2. **Option B:** ใช้ `export const config = { runtime: 'nodejs' }` ใน API routes
-3. **Option C:** ใช้ Netlify's built-in identity แทน NextAuth
-4. **Option D:** ตั้ง `NEXTAUTH_URL` ให้ถูก + เช็คว่า edge function รับ env vars ได้
-
-**Debug:**
-```bash
-# ดู Netlify function logs
-# ไปที่ https://app.netlify.com/sites/cardvault-tcg/logs/functions
-# หรือ
-netlify functions:list
-```
-
-**ไฟล์ที่เกี่ยว:**
-- `middleware.ts` — route protection
-- `lib/auth.ts` — NextAuth config
-- `app/api/auth/[...nextauth]/route.ts` — handler
-
-### 2. Omise Payment
-
-**ต้องการ:** `OMISE_PUBLIC_KEY` (pkey_...), `OMISE_SECRET_KEY` (skey_...), `OMISE_WEBHOOK_SECRET`
-
-**ขั้นตอน:**
-1. สมัคร https://www.omise.co
-2. รับ API keys จาก dashboard
-3. ตั้ง env vars ใน Netlify/Vercel
-4. เพิ่ม Omise.js SDK ใน frontend สำหรับ credit card tokenization
-5. ทดสอบ PromptPay QR flow
-
-**ไฟล์ที่เกี่ยว:**
-- `lib/omise.ts` — client wrapper (ready, แค่ใส่ keys)
-- `app/api/payments/charge/route.ts` — สร้าง charges
-- `app/api/webhooks/omise/route.ts` — รับ payment callbacks
-- `services/escrow.service.ts` — escrow hold/release/refund
-
-### 3. Cloudflare R2 Storage
-
-**ต้องการ:** `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
-
-**ขั้นตอน:**
-1. สร้าง Cloudflare R2 bucket
-2. สร้าง API token ที่มี R2 permissions
-3. ตั้ง env vars
-4. Config custom domain สำหรับ public access
-
-**ไฟล์ที่เกี่ยว:**
-- `lib/r2.ts` — S3-compatible client (ready)
-- `app/api/upload/presigned-url/route.ts` — presigned PUT URLs
-
-### 4. Resend Email
-
-**ต้องการ:** `RESEND_API_KEY` (re_...), `RESEND_FROM_EMAIL`
-
-**ขั้นตอน:**
-1. สมัคร https://resend.com
-2. รับ API key
-3. Verify domain ใน Resend dashboard
-4. ตั้ง env vars
-
-**ไฟล์ที่เกี่ยว:**
-- `lib/resend.ts` — email templates (order paid, shipped, completed, dispute, password reset)
-
-### 5. CRON_SECRET
-
-```bash
-openssl rand -hex 32
-# ตั้งเป็น CRON_SECRET ใน env vars
-# สำหรับ escrow auto-release cron
-```
-
----
-
-## 📁 โครงสร้างไฟล์
-
-```
-cardvault/
-├── app/
-│   ├── (auth)/                    # Auth pages (login, register, forgot-password, reset-password)
-│   │   ├── login/page.tsx
-│   │   ├── register/page.tsx
-│   │   ├── forgot-password/page.tsx
-│   │   └── reset-password/page.tsx
-│   ├── (main)/                    # Main layout pages (header + footer + mobile nav)
-│   │   ├── page.tsx               # Homepage
-│   │   ├── browse/page.tsx        # Browse listings
-│   │   ├── listing/[id]/page.tsx  # Listing detail
-│   │   ├── card/[catalogId]/page.tsx # Card catalog detail
-│   │   ├── checkout/[listingId]/page.tsx
-│   │   ├── profile/page.tsx       # Own profile (auth required)
-│   │   ├── profile/[username]/page.tsx # Public profile
-│   │   ├── settings/page.tsx      # Account settings (NEW)
-│   │   ├── orders/page.tsx        # Orders list
-│   │   ├── orders/[id]/page.tsx   # Order detail
-│   │   ├── check/page.tsx         # Scammer check
-│   │   ├── community/page.tsx     # Community feed
-│   │   ├── community/forum/page.tsx
-│   │   ├── community/forum/[threadId]/page.tsx
-│   │   ├── faq/page.tsx
-│   │   ├── how-it-works/page.tsx
-│   │   ├── terms/page.tsx
-│   │   ├── privacy/page.tsx
-│   │   ├── contact/page.tsx
-│   │   └── escrow-info/page.tsx
-│   ├── admin/                     # Admin panel (ADMIN role required)
-│   │   ├── page.tsx               # Dashboard
-│   │   ├── users/page.tsx
-│   │   ├── listings/page.tsx
-│   │   ├── kyc/page.tsx
-│   │   └── disputes/page.tsx
-│   ├── sell/                      # Seller dashboard (auth required)
-│   │   ├── page.tsx               # Dashboard
-│   │   ├── new/page.tsx           # New listing wizard
-│   │   ├── listings/page.tsx
-│   │   ├── orders/page.tsx
-│   │   ├── analytics/page.tsx
-│   │   ├── kyc/page.tsx
-│   │   └── subscription/page.tsx
-│   ├── api/
-│   │   ├── auth/
-│   │   │   ├── [...nextauth]/route.ts  # NextAuth handler
-│   │   │   ├── register/route.ts
-│   │   │   ├── forgot-password/route.ts
-│   │   │   └── reset-password/route.ts
-│   │   ├── listings/route.ts      # GET listings
-│   │   ├── listings/[id]/route.ts
-│   │   ├── orders/route.ts
-│   │   ├── orders/[id]/route.ts
-│   │   ├── users/
-│   │   │   ├── [id]/route.ts      # GET user profile
-│   │   │   └── me/route.ts        # GET/PATCH own profile (NEW)
-│   │   ├── payments/charge/route.ts
-│   │   ├── webhooks/omise/route.ts
-│   │   ├── upload/route.ts
-│   │   ├── upload/mock/route.ts
-│   │   ├── upload/presigned-url/route.ts
-│   │   ├── community/posts/route.ts
-│   │   ├── forum/threads/route.ts
-│   │   ├── cron/escrow-release/route.ts
-│   │   ├── debug/route.ts
-│   │   └── ...
-│   ├── layout.tsx                 # Root layout
-│   ├── globals.css                # Global styles + CSS variables
-│   ├── error.tsx                  # Global error boundary
-│   ├── loading.tsx
-│   ├── not-found.tsx
-│   ├── robots.ts
-│   └── sitemap.ts
-├── components/
-│   ├── ui/                        # shadcn/ui components
-│   ├── shared/                    # Header, Footer, MobileBottomNav, LiveToast, etc.
-│   ├── home/                      # Homepage sections
-│   ├── browse/                    # Filter sidebar
-│   ├── listing/                   # Listing card
-│   ├── order/                     # Escrow status, confirm/dispute buttons
-│   ├── scanner/                   # Card scanner (Tesseract.js)
-│   └── sell-mobile-nav.tsx
-├── lib/
-│   ├── prisma.ts                  # ⚠️ Custom Prisma→PostgREST proxy (~2200 lines)
-│   ├── supabase-client.ts         # Supabase admin (lazy init via Proxy)
-│   ├── auth.ts                    # NextAuth config
-│   ├── omise.ts                   # Payment client
-│   ├── r2.ts                      # Storage client
-│   ├── resend.ts                  # Email sender
-│   ├── rate-limit.ts              # Rate limiting
-│   ├── design-tokens.ts           # UI tokens
-│   ├── email.ts                   # Re-exports from resend.ts
-│   └── utils.ts                   # formatPrice, getInitials, getRelativeTime, etc.
-├── services/
-│   ├── escrow.service.ts          # Escrow hold/release/refund
-│   ├── card-identify.service.ts   # OCR + Pokemon TCG API
-│   ├── tier.service.ts            # Seller tier auto-upgrade
-│   └── notification.service.ts    # Notifications
-├── prisma/
-│   ├── schema.prisma              # Database schema (all models + enums)
-│   └── seed.ts                    # Seed data
-├── middleware.ts                   # Route protection + security headers
-├── next.config.js
-├── tailwind.config.ts
-├── tsconfig.json
-├── package.json
-├── netlify.toml                   # Netlify config (NEW)
-├── vercel.json                    # Vercel config
-├── HANDOFF.md                     # Detailed status doc
-├── PROMPT_FOR_NEXT_AGENT.md       # This file
-├── CardVault_MasterSystem_v2.1.md # Full system spec (2500+ lines)
-└── .env.example                   # Env vars template
-```
-
----
-
-## 🔄 Workflow
+## 🔄 Workflow สำหรับ Agent ถัดไป
 
 ### Setup
 ```bash
@@ -346,121 +257,129 @@ git config user.email "agent@openclaw.ai"
 git config user.name "OpenClaw Agent"
 git remote set-url origin https://<GITHUB_PAT>@github.com/photsathonspd1-create/cardvault.git
 git pull origin main
-npm install
 ```
 
-### Build & Test
+### Work Cycle
 ```bash
-npx tsc --noEmit          # TypeScript check (ต้องไม่มี error)
-npm run build             # Full build (ต้องมี env vars)
+# 1. สร้าง .env (ดูหัวข้อ Deploy)
+# 2. npm install
+# 3. แก้โค้ด
+# 4. npm run build (ต้องผ่าน)
+# 5. git add -A && git commit -m "feat: ..." && git push origin main
+# 6. Deploy ขึ้น Netlify (ดูหัวข้อ Deploy)
+# 7. ลบ .env
+# 8. อัพเดท HANDOFF.md
 ```
 
-### Deploy
+### Deploy Flow (สำคัญมาก!)
 ```bash
-# Netlify (preferred — Vercel limit reached)
-export NETLIFY_AUTH_TOKEN="nfp_LK6qKSRUtEaxHYJVVRyZXXC3j4qhYeEiac86"
-netlify deploy --prod --build
+# ⚠️ Netlify ไม่มี auto-deploy จาก GitHub
+# ต้อง deploy ด้วย CLI ทุกครั้ง:
 
-# Vercel (เมื่อ limit reset)
-git push origin main      # auto-deploy
+npm install -g netlify-cli  # ครั้งแรกเท่านั้น
+
+# Build + Deploy
+cat > .env << 'EOF'
+DATABASE_URL="postgresql://postgres:<PASSWORD>@db.ruugptsudyxyozywevcu.supabase.co:5432/postgres"
+DIRECT_URL="postgresql://postgres:<PASSWORD>@db.ruugptsudyxyozywevcu.supabase.co:5432/postgres"
+NEXTAUTH_URL="https://cardvault-tcg.netlify.app"
+NEXTAUTH_SECRET="<from netlify env vars>"
+NEXT_PUBLIC_SUPABASE_URL="https://ruugptsudyxyozywevcu.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="<from netlify env vars>"
+NEXT_PUBLIC_APP_URL="https://cardvault-tcg.netlify.app"
+EOF
+
+npm run build && \
+NETLIFY_AUTH_TOKEN=nfp_LK6qKSRUtEaxHYJVVRyZXXC3j4qhYeEiac86 \
+NETLIFY_SITE_ID=8dcb5718-5634-4c41-939b-7d229bca2aab \
+netlify deploy --prod --dir=.next && \
+rm -f .env
+```
+
+### เช็ค deploy สำเร็จ:
+```bash
+# เช็คว่า nav ใหม่ขึ้นมั้ย
+curl -s https://cardvault-tcg.netlify.app/ | grep -o "ซื้อของ"
+# ถ้าไม่ขึ้น = deploy ยังไม่ live
+
+# เช็ค API
+curl -s https://cardvault-tcg.netlify.app/api/listings | head -c 200
 ```
 
 ### Git Rules
 ```bash
-# Commit format
 git commit -m "fix: description"    # bug fix
 git commit -m "feat: description"   # new feature
 git commit -m "docs: description"   # documentation
-
-# ⚠️ NEVER commit secrets — GitHub will block the push
-# ⚠️ Always run npx tsc --noEmit before pushing
+# ⚠️ NEVER commit secrets
+# ⚠️ Always npm run build before pushing
 ```
 
 ---
 
 ## 🧪 วิธีทดสอบ
 
-### เช็คหน้าเว็บ:
 ```bash
-# ทุกหน้าควร return 200
-curl -s -o /dev/null -w "%{http_code}" https://cardvault-tcg.netlify.app/
-curl -s -o /dev/null -w "%{http_code}" https://cardvault-tcg.netlify.app/browse
-curl -s -o /dev/null -w "%{http_code}" https://cardvault-tcg.netlify.app/settings
-curl -s -o /dev/null -w "%{http_code}" https://cardvault-tcg.netlify.app/profile
-curl -s -o /dev/null -w "%{http_code}" https://cardvault-tcg.netlify.app/login
-```
+# Pages — ทุกหน้าควร return 200
+for p in "/" "/browse" "/login" "/register" "/check" "/community" "/how-it-works" "/faq" "/contact" "/terms" "/privacy" "/settings"; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "https://cardvault-tcg.netlify.app$p")
+  echo "$p → $code"
+done
 
-### เช็ค API:
-```bash
-# Listings API (ควร return ข้อมูล)
-curl -s https://cardvault-tcg.netlify.app/api/listings | python3 -m json.tool | head -20
+# API
+curl -s https://cardvault-tcg.netlify.app/api/listings | head -c 200
+curl -s -o /dev/null -w "%{http_code}" https://cardvault-tcg.netlify.app/api/users/me
+# ควร return 401 (unauthenticated)
 
-# Auth session (⚠️ currently 500 on Netlify)
-curl -s https://cardvault-tcg.netlify.app/api/auth/session
-```
-
-### เช็ค Supabase ตรง:
-```bash
-# ดู users ใน database
-curl -s "https://ruugptsudyxyozywevcu.supabase.co/rest/v1/User?select=id,email,name,username,role&limit=5" \
-  -H "apikey: <SUPABASE_KEY>" \
-  -H "Authorization: Bearer <SUPABASE_KEY>"
-
-# ดู listings
-curl -s "https://ruugptsudyxyozywevcu.supabase.co/rest/v1/Listing?select=id,customName,price,status&limit=5" \
-  -H "apikey: <SUPABASE_KEY>" \
-  -H "Authorization: Bearer <SUPABASE_KEY>"
+# ดู Netlify function logs (ถ้ามี error)
+# ไปที่ https://app.netlify.com/projects/cardvault-tcg/logs/functions
 ```
 
 ---
 
 ## 📊 Database Schema (สำคัญ)
 
-### Models หลัก:
-- **User** — ผู้ใช้ (role: USER/SELLER/ADMIN/SUPER_ADMIN)
-- **SellerProfile** — โปรไฟล์ผู้ขาย (tier: BRONZE/SILVER/GOLD/VERIFIED_PRO)
-- **Listing** — รายการขาย (status: DRAFT/PENDING_REVIEW/ACTIVE/SOLD/PAUSED/EXPIRED/REJECTED)
-- **Order** — ออเดอร์ (status: PENDING_PAYMENT/PAID/SHIPPED/DELIVERED/COMPLETED/DISPUTED/CANCELLED/REFUNDED)
-- **CardCatalog** — แคตตาล็อกการ์ด
-- **Review** — รีวิว
-- **Dispute** — ข้อพิพาท
-- **CommunityPost** — โพสต์ชุมชน
-- **ForumThread/ForumReply** — ฟอรั่ม
-- **ScammerReport** — รายงานมิจฉาชีพ
+ดูเต็มๆ ที่ `prisma/schema.prisma`
 
-### Enums สำคัญ:
-```
-CardSeries:    POKEMON, YUGIOH, MTG, ONE_PIECE, VANGUARD, DIGIMON, OTHER
-Condition:     MINT, NEAR_MINT, EXCELLENT, GOOD, PLAYED, POOR
-CardLanguage:  THAI, JAPANESE, ENGLISH, KOREAN, OTHER
-```
-
-### Seed Data (prisma/seed.ts):
-มี users 3 คน (admin, seller1, seller2), listings 5 รายการ, cards ใน CardCatalog
+Models หลัก:
+- **User** — role: USER/SELLER/ADMIN/SUPER_ADMIN
+- **SellerProfile** — tier: BRONZE/SILVER/GOLD/VERIFIED_PRO
+- **Listing** — status: DRAFT/PENDING_REVIEW/ACTIVE/SOLD/PAUSED/EXPIRED/REJECTED
+- **Order** — status: PENDING_PAYMENT/PAID/SHIPPED/DELIVERED/COMPLETED/DISPUTED/CANCELLED/REFUNDED
+- **CardCatalog** — series: POKEMON/YUGIOH/MTG/ONE_PIECE/VANGUARD/DIGIMON/OTHER
+- **PriceHistory** — card price over time
+- **ScammerReport** — scammer database
+- **CommunityPost, ForumThread** — community features
 
 ---
 
-## ⚠️ Known Risks & Gotchas
+## 🎨 Design System
 
-1. **Prisma proxy = #1 risk** — query pattern ที่ไม่รองรับจะ return empty/wrong data เงียบๆ
-2. **No real transactions** — order creation อาจ inconsistent ถ้า fail กลางทาง
+```
+Background:    #09090b (zinc-950)
+Secondary BG:  #111113 (zinc-900)
+Accent Gold:   #F59E0B (amber-500)
+Purple:        #7C3AED
+Font Thai:     Sarabun
+Font Latin:    Inter
+Theme:         "Dark Gaming Luxury" — Steam meets Binance meets Japanese card shop
+```
+
+---
+
+## ⚠️ Known Risks
+
+1. **Prisma proxy = #1 risk** — query ที่ไม่รองรับจะ return empty/wrong data เงียบๆ
+2. **No real transactions** — order creation อาจ inconsistent
 3. **Supabase RLS bypassed** — service role key gives full access
-4. **Tesseract OCR** — อาจไม่ทำงานกับภาษาไทย
-5. **No error monitoring** — ไม่มี Sentry, ดูแค่ function logs
-6. **bcryptjs edge warning** — compile warning แต่ไม่ crash (ใช้ nodejs runtime ไม่ใช่ edge)
-7. **Env vars lazy init** — `getSupabaseUrl()` / `getSupabaseServiceKey()` ไม่ throw ตอน import, throw ตอนใช้
-8. **Image domains** — `next.config.js` อาจต้องเพิ่ม `images.remotePatterns` สำหรับ Pokémon TCG API images
-9. **Vercel deploy limit** — 100 deploys/day (free tier), หมดแล้ว, reset ~2026-05-18 15:00
+4. **No error monitoring** — ไม่มี Sentry
+5. **Netlify cold start** — homepage ~5s ครั้งแรก, หลังจากนั้น ~1s
+6. **bcryptjs edge warning** — compile warning แต่ไม่ crash
 
 ---
 
-## 🎯 ถ้าทำ NextAuth สำเร็จ → เว็บใช้ได้จริง
+## 🎯 เป้าหมายสุดท้าย
 
-NextAuth เป็นจุดที่ block อยู่ ถ้าแก้ได้:
-- ✅ Login/Register ทำงาน
-- ✅ Profile/Settings แสดงข้อมูลจริง
-- ✅ Sell dashboard ใช้ได้
-- ✅ Admin panel ใช้ได้
-- ✅ Checkout flow เริ่มได้ (ยังจ่ายเงินไม่ได้จนกว่าจะ config Omise)
+ถ้าทำ Omise payment + R2 storage + Resend email สำเร็จ → **เว็บใช้ซื้อ-ขายจริงได้เลย**
 
-**ขอให้โชคดี! 🚀**
+โชคดี! 🚀

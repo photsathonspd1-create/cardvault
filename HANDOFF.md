@@ -324,10 +324,10 @@ b759a3c debug: improve error capture in auth handler
 
 ### Deploy Flow
 ```
-Code Change → npm run build → git commit → git push origin main
-                                                   ↓
-                                          Netlify auto-deploys
-                                          (Vercel limit reached)
+Code Change → npm run build → netlify deploy --prod --dir=.next
+                                          ↑
+⚠️ ไม่ใช่ auto-deploy! ต้องใช้ CLI ทุกครั้ง
+(GitHub ไม่ได้เชื่อมกับ Netlify)
 ```
 
 ### Agent Handoff Protocol

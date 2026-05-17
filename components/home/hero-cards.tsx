@@ -1,102 +1,159 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
-import { motion } from "framer-motion"
 import Image from "next/image"
 
 const CARDS = [
   {
-    src: "https://images.pokemontcg.io/swsh4/20_hires.png",
-    alt: "Charizard VMAX",
-    width: "w-48 md:w-64",
-    z: "z-20",
-    rotate: 0,
-    x: "left-1/2 -translate-x-1/2",
-    y: "top-4",
-    delay: 0,
-    glow: "rgba(245,158,11,0.6)",
-  },
-  {
     src: "https://images.pokemontcg.io/swsh12/44_hires.png",
     alt: "Pikachu VMAX",
-    width: "w-40 md:w-52",
-    z: "z-10",
-    rotate: -15,
-    x: "left-0",
-    y: "top-8",
-    delay: 0.5,
-    glow: "rgba(255,200,50,0.4)",
+    position: "left",
+  },
+  {
+    src: "https://images.pokemontcg.io/swsh4/20_hires.png",
+    alt: "Charizard VMAX",
+    position: "center",
   },
   {
     src: "https://images.pokemontcg.io/swsh9/79_hires.png",
     alt: "Mewtwo V",
-    width: "w-40 md:w-52",
-    z: "z-10",
-    rotate: 15,
-    x: "right-0",
-    y: "top-8",
-    delay: 1,
-    glow: "rgba(124,58,237,0.4)",
+    position: "right",
   },
 ]
 
 export function HeroCards() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return
-      const rect = containerRef.current.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-      const x = ((e.clientX - centerX) / rect.width) * 10
-      const y = ((e.clientY - centerY) / rect.height) * 10
-      setMousePos({ x, y })
-    }
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
-
   return (
-    <div ref={containerRef} className="relative w-full h-[320px] md:h-[420px]">
-      {/* Glow ring */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-radial from-amber-500/20 via-purple-500/10 to-transparent blur-3xl rounded-full" />
+    <>
+      <style jsx global>{`
+        @keyframes hero-float-left {
+          0%, 100% { transform: translateY(0px) rotate(-12deg); }
+          50% { transform: translateY(-18px) rotate(-12deg); }
+        }
+        @keyframes hero-float-center {
+          0%, 100% { transform: translateX(-50%) translateY(0px); }
+          50% { transform: translateX(-50%) translateY(-18px); }
+        }
+        @keyframes hero-float-right {
+          0%, 100% { transform: translateY(0px) rotate(12deg); }
+          50% { transform: translateY(-18px) rotate(12deg); }
+        }
 
-      {CARDS.map((card, i) => (
-        <motion.div
-          key={card.alt}
-          className={`absolute ${card.width} ${card.z} ${card.x} ${card.y}`}
-          style={{
-            transform: `rotate(${card.rotate}deg) translate(${mousePos.x}px, ${mousePos.y}px)`,
-          }}
-          animate={{
-            y: [0, i === 0 ? -15 : i === 1 ? -10 : -12, 0],
-          }}
-          transition={{
-            duration: i === 0 ? 3 : i === 1 ? 3.5 : 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: card.delay,
-          }}
-        >
+        .hero-card-wrapper {
+          transition: filter 0.35s ease;
+        }
+        .hero-card-inner {
+          transition: transform 0.35s ease;
+          cursor: pointer;
+        }
+
+        /* Left card */
+        .hero-pos-left {
+          left: 10%;
+          top: 12%;
+          width: clamp(140px, 18vw, 200px);
+          animation: hero-float-left 6s ease-in-out infinite;
+          filter: drop-shadow(0 0 40px rgba(124,58,237,0.5));
+          z-index: 10;
+        }
+        .hero-pos-left:hover {
+          filter: drop-shadow(0 0 60px rgba(124,58,237,0.7));
+        }
+        .hero-pos-left:hover .hero-card-inner {
+          transform: translateY(-6px) scale(1.01);
+        }
+
+        /* Center card */
+        .hero-pos-center {
+          left: 50%;
+          top: 0%;
+          width: clamp(180px, 22vw, 280px);
+          animation: hero-float-center 5s ease-in-out infinite;
+          filter: drop-shadow(0 0 50px rgba(245,158,11,0.6));
+          z-index: 30;
+        }
+        .hero-pos-center:hover {
+          filter: drop-shadow(0 0 65px rgba(245,158,11,0.75));
+        }
+        .hero-pos-center:hover .hero-card-inner {
+          transform: translateY(-6px) scale(1.01);
+        }
+
+        /* Right card */
+        .hero-pos-right {
+          right: 10%;
+          top: 12%;
+          width: clamp(140px, 18vw, 200px);
+          animation: hero-float-right 6s ease-in-out infinite;
+          filter: drop-shadow(0 0 40px rgba(124,58,237,0.5));
+          z-index: 10;
+        }
+        .hero-pos-right:hover {
+          filter: drop-shadow(0 0 60px rgba(124,58,237,0.7));
+        }
+        .hero-pos-right:hover .hero-card-inner {
+          transform: translateY(-6px) scale(1.01);
+        }
+      `}</style>
+
+      <div className="relative w-full h-[340px] md:h-[440px] overflow-hidden">
+        {/* ── Ambient glow layer ── */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Purple glow — left */}
           <div
-            className="relative rounded-2xl overflow-hidden"
+            className="absolute rounded-full opacity-40"
             style={{
-              filter: `drop-shadow(0 0 40px ${card.glow})`,
+              width: 320,
+              height: 320,
+              left: "8%",
+              top: "15%",
+              background: "radial-gradient(circle, rgba(124,58,237,0.5) 0%, transparent 70%)",
+              filter: "blur(100px)",
             }}
+          />
+          {/* Gold glow — center-right */}
+          <div
+            className="absolute rounded-full opacity-30"
+            style={{
+              width: 380,
+              height: 380,
+              left: "45%",
+              top: "10%",
+              background: "radial-gradient(circle, rgba(245,158,11,0.4) 0%, transparent 70%)",
+              filter: "blur(120px)",
+            }}
+          />
+          {/* Soft purple glow — right */}
+          <div
+            className="absolute rounded-full opacity-25"
+            style={{
+              width: 260,
+              height: 260,
+              right: "5%",
+              top: "20%",
+              background: "radial-gradient(circle, rgba(124,58,237,0.35) 0%, transparent 70%)",
+              filter: "blur(80px)",
+            }}
+          />
+        </div>
+
+        {/* ── Cards ── */}
+        {CARDS.map((card) => (
+          <div
+            key={card.alt}
+            className={`hero-card-wrapper hero-pos-${card.position} absolute`}
           >
-            <Image
-              src={card.src}
-              alt={card.alt}
-              width={300}
-              height={420}
-              className="rounded-2xl"
-              priority={i === 0}
-            />
+            <div className="hero-card-inner">
+              <Image
+                src={card.src}
+                alt={card.alt}
+                width={300}
+                height={420}
+                className="rounded-3xl w-full h-auto"
+                priority={card.position === "center"}
+              />
+            </div>
           </div>
-        </motion.div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   )
 }

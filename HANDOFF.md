@@ -90,15 +90,16 @@ Supabase Project: ruugptsudyxyozywevcu
 
 ## ⚠️ Known Issues / Next Steps
 
-1. **Mock Data:** Seller dashboard, profile, hot-this-week, scammer check use mock data — need real API integration
-2. **Missing Features:**
+1. **`@ts-nocheck` in `app/(main)/page.tsx`** — ต้องลบออกแล้ว fix type errors (ขัดกับ rule "ห้ามใช้ any type")
+2. **Mock Data:** Seller dashboard, profile, hot-this-week, scammer check use mock data — need real API integration
+3. **Missing Features:**
    - Realtime price history chart (Recharts) on listing detail
    - Card scanner camera integration (Step 1 of sell wizard)
    - Payment flow (Omise integration) on checkout
    - Chat/messaging between buyer/seller
    - Watchlist functionality
    - Notification system
-3. **Pages Not Redesigned:**
+4. **Pages Not Redesigned:**
    - `app/(main)/checkout/[listingId]/page.tsx` — checkout flow
    - `app/(main)/orders/page.tsx` — orders list
    - `app/sell/analytics/page.tsx` — analytics (currently Recharts)
@@ -111,8 +112,33 @@ Supabase Project: ruugptsudyxyozywevcu
    - `app/(main)/escrow-info/page.tsx`
    - `app/(main)/terms/page.tsx`
    - `app/(main)/privacy/page.tsx`
-4. **Seller Dashboard:** Uses client-side tab switching, not URL-based routing — sub-pages like `/sell/listings`, `/sell/orders` still have old code
-5. **Admin Sub-pages:** `app/admin/listings/`, `app/admin/disputes/`, `app/admin/users/` still have old code — main admin page uses client-side tabs
+5. **Seller Dashboard:** Uses client-side tab switching, not URL-based routing — sub-pages like `/sell/listings`, `/sell/orders` still have old code
+6. **Admin Sub-pages:** `app/admin/listings/`, `app/admin/disputes/`, `app/admin/users/` still have old code — main admin page uses client-side tabs
+
+---
+
+## ✅ PHASE B + C — Verified Complete (2026-05-17 11:03)
+
+Agent ตรวจสอบแล้ว — ทุกไฟล์ใน PHASE B (Shared Components) และ PHASE C (Homepage) ทำครบแล้ว:
+
+| # | Component | File | Status |
+|---|-----------|------|--------|
+| 1 | Design Tokens | `tailwind.config.ts` | ✅ colors, animations, shadows, gradients |
+| 2 | Google Fonts | `app/layout.tsx` | ✅ Sarabun + Inter |
+| 3 | Navbar | `components/shared/header.tsx` | ✅ scroll blur, mobile drawer, active underline |
+| 4 | Footer | `components/shared/footer.tsx` | ✅ 4-column, social links, bottom bar |
+| 5 | Mobile Bottom Nav | `components/shared/mobile-bottom-nav.tsx` | ✅ 5 tabs, center amber, badge |
+| 6 | Hero Cards | `components/home/hero-cards.tsx` | ✅ floating animation, mouse parallax, glow |
+| 7 | Scammer Check Bar | `components/home/scammer-check-bar.tsx` | ✅ search + stats |
+| 8 | Category Section | `components/home/category-section.tsx` | ✅ 4 series cards, hover scale |
+| 9 | Hot This Week | `components/home/hot-this-week.tsx` | ✅ up/down tabs, price table |
+| 10 | Verified Sellers | `components/home/verified-seller-spotlight.tsx` | ✅ 4 seller cards, tier badges |
+| 11 | Live Toast | `components/shared/live-toast.tsx` | ✅ auto-cycle 5s, close button |
+| 12 | Homepage Assembly | `app/(main)/page.tsx` | ✅ all components assembled |
+
+**CSS Utilities ครบ:** `hero-gradient`, `text-gradient`, `glass`, `glow-gold`, `card-hover-effect`, `safe-bottom`
+
+**Next agent:** เริ่มจาก PHASE D (Browse page) หรือ fix `@ts-nocheck` issue ก่อน
 
 ---
 
@@ -207,3 +233,4 @@ Font Latin: Inter (Google Fonts)
 ---
 
 *Generated: 2026-05-17 10:49 GMT+8*
+*Updated: 2026-05-17 11:03 GMT+8 — PHASE B+C verified complete*

@@ -1,4 +1,5 @@
 
+import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic"
 export default async function ProfilePage() {
   const session = await auth()
   const userId = (session?.user as { id?: string })?.id
+
+  if (!userId) redirect("/login")
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -33,7 +36,7 @@ export default async function ProfilePage() {
     },
   })
 
-  if (!user) return null
+  if (!user) redirect("/login")
 
   return (
     <div className="container px-4 py-8 max-w-2xl space-y-6">

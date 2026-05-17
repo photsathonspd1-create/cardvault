@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { cn, formatPrice } from "@/lib/utils"
+import { cn, formatPrice, SERIES_LABELS } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
 import {

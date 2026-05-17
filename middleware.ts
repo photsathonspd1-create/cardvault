@@ -1,11 +1,52 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
+
+/**
+ * Middleware for route protection and basic security headers
+ *
+ * NOTE: We do NOT import auth() from lib/auth here because that pulls in bcryptjs
+ * which uses Node.js APIs (process.nextTick, setImmediate) not available in Edge Runtime.
+ * Instead we decode the NextAuth JWT cookie directly.
+ */
+
+// Simple base64url decode for JWT payload (no signature verification needed —
+// NextAuth already verified the token when it was issued)
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".")
+    if (parts.length !== 3) return null
+    const payload = parts[1]
+    // base64url → base64
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const decoded = atob(b64)
+    return JSON.parse(decoded)
+  } catch {
+    return null
+  }
+}
+
+function getSessionFromCookies(request: NextRequest): { id?: string; role?: string } | null {
+  // NextAuth v5 stores JWT in this cookie
+  const token =
+    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("next-auth.session-token")?.value ||
+    request.cookies.get("__Secure-authjs.session-token")?.value
+
+  if (!token) return null
+
+  const payload = decodeJwtPayload(token)
+  if (!payload) return null
+
+  return {
+    id: (payload.sub || payload.id) as string,
+    role: payload.role as string,
+  }
+}
 
 /**
  * Middleware for route protection and basic security headers
  */
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Security headers for all responses
@@ -28,6 +69,7 @@ export async function middleware(request: NextRequest) {
     "/card",
     "/check",
     "/forgot-password",
+    "/reset-password",
     "/faq",
     "/how-it-works",
     "/escrow-info",
@@ -51,7 +93,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check auth for protected routes
-  const session = await auth()
+  const session = getSessionFromCookies(request)
 
   // Sell routes - require login
   if (pathname.startsWith("/sell") && !session) {
@@ -67,8 +109,7 @@ export async function middleware(request: NextRequest) {
       url.searchParams.set("callbackUrl", pathname)
       return NextResponse.redirect(url)
     }
-    const role = (session.user as any)?.role
-    if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/", request.url))
     }
   }

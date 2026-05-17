@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 19:28 GMT+8
+> **Last updated:** 2026-05-17 19:36 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Latest commit:** `0470795` (docs: comprehensive handoff prompt)
+> **Latest commit:** `e62112f` (feat: redesign hero card stack — premium cinematic floating cards)
 > **Branch:** `main` — clean, up to date with origin
 > **Build status:** ✅ `npm run build` passes
 
@@ -70,6 +70,23 @@
 
 ### UI Redesign (10 pages done)
 Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)
+
+### Hero Card Stack Redesign (commit `e62112f`)
+| # | Change | Details |
+|---|---|---|
+| 1 | Removed Framer Motion | Pure CSS keyframes for animations |
+| 2 | Ambient glow layer | Purple glow left + gold glow center + purple glow right (radial gradients with blur) |
+| 3 | 3-card depth layout | Left (-12deg, behind), Center (front, largest), Right (12deg, behind) |
+| 4 | Cinematic float animation | 5-6s ease-in-out infinite, 18px translateY |
+| 5 | Subtle hover effects | translateY(-6px) + scale(1.01) + stronger glow |
+| 6 | Premium aesthetic | Dark luxury gaming feel, no glassmorphism, no rainbow effects |
+
+### Community/Forum API Fix (commit `d47b9be`)
+| # | Fix | Details |
+|---|---|---|
+| 1 | Middleware public paths | Added `/api/community` and `/api/forum` to public paths |
+| 2 | Community API | GET /api/community/posts now returns 200 (was 401) |
+| 3 | Forum API | GET /api/forum/threads now returns 200 (was 401) |
 
 ### Homepage Real Data + Enhancements (commit `4bfdae0` + `8bf4c78`)
 | # | Feature | Details | Files |

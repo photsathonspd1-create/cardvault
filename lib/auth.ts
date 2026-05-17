@@ -206,3 +206,5 @@ export const {
   },
 })
 // LINE Login configured
+
+// LINE Login enabled — env vars configured 2026-05-17

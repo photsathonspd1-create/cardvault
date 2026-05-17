@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 19:48 GMT+8
+> **Last updated:** 2026-05-17 20:15 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Latest commit:** `4a2e254` (fix: hero cards — dominant center, tighter overlap, cinematic depth)
+> **Latest commit:** `7e2a16b` (feat: redesign scammer check section — premium trust system)
 > **Branch:** `main` — clean, up to date with origin
 > **Build status:** ✅ `npm run build` passes
 
@@ -82,6 +82,18 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | 6 | Depth hierarchy | Sides opacity 0.92, center 1 — sides slightly darker |
 | 7 | Atmospheric glow | Soft blurred ambient light, not neon outlines |
 | 8 | Subtle hover | translateY(-8px) + tiny scale + stronger glow, no aggressive transforms |
+
+### Scammer Check Section Redesign (commit `7e2a16b`)
+| # | Change | Details |
+|---|---|---|
+| 1 | Premium glass surface | Dark gradient bg with backdrop blur, rounded-3xl |
+| 2 | Ambient glow layer | Purple left + amber right, soft blurred radial gradients |
+| 3 | Subtle grid texture | Low-opacity grid lines for depth |
+| 4 | Shield icon | 56px rounded-2xl with amber glow halo |
+| 5 | Title | text-3xl font-black, tight tracking |
+| 6 | Premium search bar | Apple/Linear style, black/50 bg, amber focus glow, inset shadow |
+| 7 | Trust metric pills | 3 pills with icons, microinteractions (hover lift) |
+| 8 | Button | Amber gradient, black text, hover translateY(-2px) |
 
 ### Community/Forum API Fix (commit `d47b9be`)
 | # | Fix | Details |

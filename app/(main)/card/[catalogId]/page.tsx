@@ -58,11 +58,35 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
       },
     })
   } catch (e) {
-    console.error("CardCatalogPage error:", e)
+    console.error("CardCatalogPage query error:", e)
     notFound()
   }
 
   if (!card) notFound()
+
+  // Price stats - with safety
+  const prices = (card.listings ?? []).map((l) => l.price).filter(Boolean)
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : null
+  const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null
+
+  // Safe date helper
+  const safeDate = (d: any) => {
+    try { return d ? new Date(d).toLocaleDateString("th-TH") : "-" } catch { return "-" }
+  }
+
+  // Safe types array
+  const types = Array.isArray(card.types) ? card.types : []
+
+  return (
+    <div className="container px-4 py-8">
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left: Card Image */}
+        <div className="space-y-4">
+          <div className="relative aspect-[3/4] bg-muted rounded-lg overflow-hidden">
+            <Image
+              src={card.imageUrlHi ?? card.imageUrl ?? "/placeholder-card.png"}
+              alt={card.name ?? "Card"}
 
   // Price stats
   const prices = card.listings.map((l) => l.price)
@@ -132,10 +156,10 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
                   <span>{card.hp}</span>
                 </div>
               )}
-              {card.types && card.types.length > 0 && (
+              {types.length > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ประเภท</span>
-                  <span>{card.types.join(", ")}</span>
+                  <span>{types.join(", ")}</span>
                 </div>
               )}
               {card.supertype && (
@@ -171,7 +195,7 @@ export default async function CardCatalogPage({ params }: CardPageProps) {
                 )}
                 {card.priceUpdatedAt && (
                   <p className="text-xs text-muted-foreground">
-                    อัพเดทล่าสุด: {new Date(card.priceUpdatedAt).toLocaleDateString("th-TH")}
+                    อัพเดทล่าสุด: {safeDate(card.priceUpdatedAt)}
                   </p>
                 )}
               </CardContent>

@@ -91,9 +91,10 @@ export const ESCROW_STATUS_LABELS: Record<string, string> = {
   FROZEN: "อายัดเงิน",
 }
 
-export function getRelativeTime(date: Date): string {
+export function getRelativeTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date
   const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = now.getTime() - d.getTime()
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
@@ -103,7 +104,7 @@ export function getRelativeTime(date: Date): string {
   if (minutes < 60) return `${minutes} นาทีที่แล้ว`
   if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`
   if (days < 7) return `${days} วันที่แล้ว`
-  return date.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" })
+  return d.toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" })
 }
 
 export function generateOrderNumber(): string {

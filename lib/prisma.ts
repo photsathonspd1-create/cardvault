@@ -1304,6 +1304,10 @@ function createModelProxy(modelName: string) {
         }
       }
 
+      // Add Prisma defaults that PostgREST won't auto-fill
+      if (!simple.createdAt) simple.createdAt = new Date()
+      if (!simple.updatedAt) simple.updatedAt = new Date()
+
       // Convert dates
       const insertData = convertDates(simple)
 
@@ -1363,7 +1367,11 @@ function createModelProxy(modelName: string) {
         skipDuplicates?: boolean
       }
 
-      const insertData = inputData.map((d) => convertDates(d))
+      const insertData = inputData.map((d) => {
+        if (!d.createdAt) d.createdAt = new Date()
+        if (!d.updatedAt) d.updatedAt = new Date()
+        return convertDates(d)
+      })
 
       const { data, error, count } = await supabaseAdmin
         .from(table)

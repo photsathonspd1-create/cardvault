@@ -1,12 +1,12 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 16:42 GMT+8
+> **Last updated:** 2026-05-17 17:52 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Live (Vercel):** https://cardvault-drab.vercel.app (deploy limit reached, resumes ~2026-05-18)
-> **Latest commit:** `9b386d2` (fix: NextAuth working on Netlify - add trustHost and explicit secret)
+> **Latest commit:** `67e17be` (fix: auth-helpers fallback uses internal session API)
 > **Branch:** `main` — clean, up to date with origin
+> **Build status:** ✅ `npm run build` passes
 
 ---
 
@@ -38,7 +38,7 @@
 
 ## ✅ COMPLETED WORK (all committed & pushed)
 
-### NextAuth Netlify Fixes (commits `bb8f895` → `9b386d2`)
+### NextAuth Netlify Fixes (commits `bb8f895` → `67e17be`)
 | # | Issue | Fix | Files |
 |---|---|---|---|
 | 17 | bcryptjs crashes on Netlify Edge (middleware) | Replaced bcrypt with JWT decode for auth checks in middleware | `middleware.ts` |
@@ -46,6 +46,7 @@
 | 19 | NextAuth trustHost missing | Added `trustHost: true` and explicit `secret` in NextAuth config | `lib/auth.ts` |
 | 20 | NextAuth error capture | Improved error logging in auth handler | `app/api/auth/[...nextauth]/route.ts` |
 | 21 | Test auth endpoint exposed | Added test-auth endpoint, then removed after debugging | `app/api/test-auth/route.ts` (removed) |
+| 22 | `auth()` fails in API routes (JWE encrypted JWT) | Added `auth-helpers.ts` fallback using internal session API call | `lib/auth-helpers.ts` |
 
 ### Bug Fixes (commit `93ac4dd` + earlier)
 | # | Issue | Fix | Files |
@@ -78,7 +79,14 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 
 ---
 
-## 🧪 TEST RESULTS (2026-05-17 15:55 GMT+8)
+## 🧪 TEST RESULTS (2026-05-17 17:52 GMT+8)
+
+### Build
+| Check | Status |
+|---|---|
+| `npm install` | ✅ Clean |
+| `npm run build` | ✅ Passes (all pages compile) |
+| TypeScript | ✅ No errors |
 
 ### Pages — All Working ✅
 | Page | Status | Notes |
@@ -133,7 +141,7 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | 2 | **Cloudflare R2 Storage** | ❌ Not configured | Need `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`. Code ready in `lib/r2.ts` |
 | 3 | **Resend Email** | ❌ Not configured | Need `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. Templates ready in `lib/resend.ts` |
 | 4 | **CRON_SECRET** | ❌ Not set | Generate: `openssl rand -hex 32`. Escrow auto-release needs this |
-| 5 | **Login Flow E2E Test** | ⚠️ Untested | Uses `prisma.user.findUnique({ where: { email } })` — should work with proxy but unverified with actual login |
+| 5 | **Login Flow E2E Test** | ⚠️ Partially tested | Register page loads (200), login page loads (200), API returns 401 for unauthenticated. Full E2E login with actual credentials untested |
 
 ### Priority 2 — Important Features
 | # | Task | Status | Notes |
@@ -232,11 +240,9 @@ git pull origin main
 # 1. Make changes
 # 2. Build check
 npm run build
-# 3. Commit & push (auto-deploys to Vercel)
+# 3. Commit & push (auto-deploys to Netlify via GitHub integration)
 git add -A && git commit -m "feat: description" && git push origin main
-# 4. Deploy to Netlify (manual — use env vars)
-NETLIFY_AUTH_TOKEN=<token> NETLIFY_SITE_ID=8dcb5718-5634-4c41-939b-7d229bca2aab \
-netlify deploy --prod --dir=.next
+# 4. Netlify auto-deploys on push to main
 ```
 
 ### Critical Rules
@@ -274,6 +280,9 @@ Supabase Project: ruugptsudyxyozywevcu
 ## 📊 Commit History (recent)
 
 ```
+67e17be fix: auth-helpers fallback uses internal session API instead of JWT decode (JWE encrypted)
+2b9171f fix: auth() not working in API routes on Netlify - add JWT cookie fallback via auth-helpers
+406f1d8 docs: update HANDOFF.md - sync commit history, add workflow flow for multi-agent handoff
 9b386d2 fix: NextAuth working on Netlify - add trustHost and explicit secret
 b759a3c debug: improve error capture in auth handler
 0c847a8 debug: test NextAuth handler directly
@@ -285,10 +294,6 @@ ac8e992 fix: lazy-load bcryptjs to fix NextAuth on Netlify serverless
 fd8e8c5 fix: remove bcryptjs from Edge middleware - use JWT decode for auth checks
 4b38dfd docs: update HANDOFF.md with comprehensive test results
 bb8f895 fix: add cuid() ID generation for PostgREST create operations
-eb33e10 docs: detailed agent prompt with full architecture, debugging guide, and testing commands
-32014c9 docs: add PROMPT_FOR_NEXT_AGENT.md + update HANDOFF with Netlify info
-5adff89 fix: lazy env var initialization for Netlify edge bundling
-ab066cd docs: update HANDOFF with settings page
 ```
 
 ---

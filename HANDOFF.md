@@ -1,11 +1,12 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 15:55 GMT+8
+> **Last updated:** 2026-05-17 16:42 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
 > **Live (Vercel):** https://cardvault-drab.vercel.app (deploy limit reached, resumes ~2026-05-18)
-> **Latest commit:** `bb8f895` (fix: add cuid() ID generation for PostgREST create operations)
+> **Latest commit:** `9b386d2` (fix: NextAuth working on Netlify - add trustHost and explicit secret)
+> **Branch:** `main` — clean, up to date with origin
 
 ---
 
@@ -37,7 +38,16 @@
 
 ## ✅ COMPLETED WORK (all committed & pushed)
 
-### Bug Fixes (commit `93ac4dd` + later)
+### NextAuth Netlify Fixes (commits `bb8f895` → `9b386d2`)
+| # | Issue | Fix | Files |
+|---|---|---|---|
+| 17 | bcryptjs crashes on Netlify Edge (middleware) | Replaced bcrypt with JWT decode for auth checks in middleware | `middleware.ts` |
+| 18 | bcryptjs lazy-load on Netlify serverless | Dynamic import of bcryptjs in NextAuth credentials provider | `lib/auth.ts` |
+| 19 | NextAuth trustHost missing | Added `trustHost: true` and explicit `secret` in NextAuth config | `lib/auth.ts` |
+| 20 | NextAuth error capture | Improved error logging in auth handler | `app/api/auth/[...nextauth]/route.ts` |
+| 21 | Test auth endpoint exposed | Added test-auth endpoint, then removed after debugging | `app/api/test-auth/route.ts` (removed) |
+
+### Bug Fixes (commit `93ac4dd` + earlier)
 | # | Issue | Fix | Files |
 |---|---|---|---|
 | 1 | Prisma proxy key remapping — PostgREST returns PascalCase table names, frontend expects camelCase | Added `remapTableKeys()` recursive function | `lib/prisma.ts` |
@@ -264,12 +274,67 @@ Supabase Project: ruugptsudyxyozywevcu
 ## 📊 Commit History (recent)
 
 ```
+9b386d2 fix: NextAuth working on Netlify - add trustHost and explicit secret
+b759a3c debug: improve error capture in auth handler
+0c847a8 debug: test NextAuth handler directly
+d3f4132 fix: add explicit secret and trustHost for NextAuth on Netlify
+b4c935c debug: add test-auth to public paths
+db26192 debug: add test-auth endpoint
+ac8e992 fix: lazy-load bcryptjs to fix NextAuth on Netlify serverless
+6e872e5 debug: add error logging to NextAuth route handler
+fd8e8c5 fix: remove bcryptjs from Edge middleware - use JWT decode for auth checks
+4b38dfd docs: update HANDOFF.md with comprehensive test results
 bb8f895 fix: add cuid() ID generation for PostgREST create operations
 eb33e10 docs: detailed agent prompt with full architecture, debugging guide, and testing commands
+32014c9 docs: add PROMPT_FOR_NEXT_AGENT.md + update HANDOFF with Netlify info
 5adff89 fix: lazy env var initialization for Netlify edge bundling
-414495a debug: add detailed error to register route
-0d7eba4 fix: add createdAt/updatedAt defaults for PostgREST inserts
-5c17077 docs: add comprehensive handoff document for multi-agent continuity
-93ac4dd fix: critical bugs - homepage crash, register 500, key remapping, security
-732fa35 fix: trigger rebuild for LINE env
+ab066cd docs: update HANDOFF with settings page
+```
+
+---
+
+## 🗺️ WORKFLOW FLOW (for multi-agent handoff)
+
+### How to Continue This Project
+```
+1. Clone repo → git clone https://<PAT>@github.com/photsathonspd1-create/cardvault.git
+2. Read this HANDOFF.md (you are here)
+3. Read PROMPT_FOR_NEXT_AGENT.md for detailed architecture
+4. Pick a task from "NOT YET DONE" section above
+5. npm install → npm run build (must pass)
+6. Make changes → test locally → commit → push
+7. Update this HANDOFF.md with what you did
+8. Push HANDOFF.md update as final commit
+```
+
+### Deploy Flow
+```
+Code Change → npm run build → git commit → git push origin main
+                                                   ↓
+                                          Netlify auto-deploys
+                                          (Vercel limit reached)
+```
+
+### Agent Handoff Protocol
+```
+Agent A finishes work:
+  1. Commit all changes
+  2. Update HANDOFF.md (latest commit, new completed tasks, remaining tasks)
+  3. Push to GitHub
+  4. Tell human: "Done. HANDOFF.md updated. Next agent can pick up from [TASK]."
+
+Agent B starts work:
+  1. git pull origin main
+  2. Read HANDOFF.md
+  3. Pick next uncompleted task
+  4. Work → commit → update HANDOFF.md → push
+```
+
+### Credentials Quick Reference
+```
+GitHub PAT:       (in .env or ask human — DO NOT paste in repo)
+Netlify Token:    (in .env or ask human — DO NOT paste in repo)
+Supabase Token:   (in .env or ask human — DO NOT paste in repo)
+Supabase Project: ruugptsudyxyozywevcu
+Netlify Site ID:  8dcb5718-5634-4c41-939b-7d229bca2aab
 ```

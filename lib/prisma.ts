@@ -8,10 +8,17 @@
 
 import { supabaseAdmin } from "./supabase-client"
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-if (!SUPABASE_URL) throw new Error("NEXT_PUBLIC_SUPABASE_URL is required")
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!SUPABASE_SERVICE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required")
+// Lazy getters — deferred to first use so edge bundling doesn't crash
+function getSupabaseUrl(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is required")
+  return url
+}
+function getSupabaseServiceKey(): string {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required")
+  return key
+}
 
 // ─── Raw PostgREST fetch (bypasses Supabase JS client limitations) ──
 async function postgrestFetch<T = unknown[]>(
@@ -19,16 +26,18 @@ async function postgrestFetch<T = unknown[]>(
   params: Record<string, string>,
   signal?: AbortSignal
 ): Promise<{ data: T | null; error: string | null }> {
+  const SUPABASE_URL = getSupabaseUrl()
   const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`)
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, v)
   }
 
   try {
+    const serviceKey = getSupabaseServiceKey()
     const res = await fetch(url.toString(), {
       headers: {
-        apikey: SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
         Prefer: "return=representation",
       },
       signal,
@@ -1672,18 +1681,19 @@ function createModelProxy(modelName: string) {
         Object.assign(pgParams, buildPostgrestFilters(where))
       }
 
-      const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`)
+      const url = new URL(`${getSupabaseUrl()}/rest/v1/${table}`)
       for (const [k, v] of Object.entries(pgParams)) {
         if (k === "Prefer") continue
         url.searchParams.set(k, v)
       }
 
       try {
+        const serviceKey = getSupabaseServiceKey()
         const res = await fetch(url.toString(), {
           method: "HEAD",
           headers: {
-            apikey: SUPABASE_SERVICE_KEY,
-            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            apikey: serviceKey,
+            Authorization: `Bearer ${serviceKey}`,
             Prefer: "count=exact",
             Range: "0-0",
           },

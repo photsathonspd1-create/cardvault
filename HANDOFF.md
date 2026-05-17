@@ -1,10 +1,10 @@
 # CardVault — Agent Handoff Document
 
-> **Last updated:** 2026-05-17 18:05 GMT+8
+> **Last updated:** 2026-05-17 18:30 GMT+8
 > **Updated by:** OpenClaw Agent (webchat session)
 > **Repo:** https://github.com/photsathonspd1-create/cardvault
 > **Live (Netlify):** https://cardvault-tcg.netlify.app
-> **Latest commit:** `4bfdae0` (feat: homepage real data + live toast + category images)
+> **Latest commit:** `8bf4c78` (feat: homepage redesign - spotlight, hot index, nav update)
 > **Branch:** `main` — clean, up to date with origin
 > **Build status:** ✅ `npm run build` passes
 
@@ -71,7 +71,7 @@
 ### UI Redesign (10 pages done)
 Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Order Detail, Profile, Scammer Check, Admin Panel, Auth (Login + Register)
 
-### Homepage Real Data + Enhancements (commit `4bfdae0`)
+### Homepage Real Data + Enhancements (commit `4bfdae0` + `8bf4c78`)
 | # | Feature | Details | Files |
 |---|---|---|---|
 | 1 | Stats Footer — real DB queries | CardCatalog count, completed Order count, SUM totalAmount (baht), User count | `app/(main)/page.tsx` |
@@ -80,6 +80,11 @@ Homepage, Browse, Listing Detail, Sell/New (4-step wizard), Seller Dashboard, Or
 | 4 | Category images updated | YGO→ygoprodeck, MTG→scryfall, One Piece→official site | `components/home/category-section.tsx` |
 | 5 | Hot This Week — PriceHistory | Tries PriceHistory for 7-day % change first, falls back to top viewed | `components/home/hot-this-week.tsx` |
 | 6 | Recent listings — 6 items | Reduced from 8 to 6 as per spec | `app/(main)/page.tsx` |
+| 7 | Card Spotlight section | New section with recommended cards, price trend arrows (up/down %) | `components/home/card-spotlight.tsx` |
+| 8 | Hot Index — Price Up/Down tabs | ดัชนี Hot with green (ขึ้น) and red (ลง) sections | `components/home/hot-this-week.tsx` |
+| 9 | Verified Seller star rating | Added 5-star visual rating display | `components/home/verified-seller-spotlight.tsx` |
+| 10 | Header nav labels | Updated to ซื้อของ, ขายของ, วิธีใช้งาน, เขียนกับเรา | `components/shared/header.tsx` |
+| 11 | Cart badge | Added count badge on cart icon | `components/shared/header.tsx` |
 
 ### Design System
 - **Colors:** bg `#09090b` (zinc-950), accent `#F59E0B` (amber-500), purple `#7C3AED`
@@ -290,6 +295,8 @@ Supabase Project: ruugptsudyxyozywevcu
 ## 📊 Commit History (recent)
 
 ```
+8bf4c78 feat: homepage redesign to match reference - spotlight, hot index, nav update
+3b705c0 docs: update HANDOFF.md with homepage enhancements
 4bfdae0 feat: homepage real data + live toast + category images + hot this week price history
 c1f7f8f docs: update HANDOFF.md - latest state, test results, commit history
 67e17be fix: auth-helpers fallback uses internal session API instead of JWT decode (JWE encrypted)
@@ -297,15 +304,6 @@ c1f7f8f docs: update HANDOFF.md - latest state, test results, commit history
 406f1d8 docs: update HANDOFF.md - sync commit history, add workflow flow for multi-agent handoff
 9b386d2 fix: NextAuth working on Netlify - add trustHost and explicit secret
 b759a3c debug: improve error capture in auth handler
-0c847a8 debug: test NextAuth handler directly
-d3f4132 fix: add explicit secret and trustHost for NextAuth on Netlify
-b4c935c debug: add test-auth to public paths
-db26192 debug: add test-auth endpoint
-ac8e992 fix: lazy-load bcryptjs to fix NextAuth on Netlify serverless
-6e872e5 debug: add error logging to NextAuth route handler
-fd8e8c5 fix: remove bcryptjs from Edge middleware - use JWT decode for auth checks
-4b38dfd docs: update HANDOFF.md with comprehensive test results
-bb8f895 fix: add cuid() ID generation for PostgREST create operations
 ```
 
 ---

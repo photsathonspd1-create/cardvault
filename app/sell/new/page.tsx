@@ -47,6 +47,7 @@ export default function SellNewPage() {
   const [step, setStep] = useState(1)
   const [images, setImages] = useState<string[]>([])
   const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -139,17 +140,24 @@ export default function SellNewPage() {
     setSubmitting(true)
 
     try {
-      // Upload images first (if Supabase storage is configured)
-      const uploadedUrls: string[] = []
+      // Upload images to Supabase Storage
+      const finalUrls: string[] = []
       for (const file of imageFiles) {
-        // For now, use data URLs as placeholder
-        // In production: upload to Supabase Storage or S3
-        const reader = new FileReader()
-        const url = await new Promise<string>((resolve) => {
-          reader.onload = (e) => resolve(e.target?.result as string)
-          reader.readAsDataURL(file)
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         })
-        uploadedUrls.push(url)
+
+        const uploadData = await uploadRes.json()
+        if (!uploadRes.ok) {
+          setError(uploadData.error || "อัปโหลดรูปไม่สำเร็จ")
+          setSubmitting(false)
+          return
+        }
+        finalUrls.push(uploadData.url)
       }
 
       const res = await fetch("/api/listings", {
@@ -170,7 +178,7 @@ export default function SellNewPage() {
           price: Number(form.price),
           quantity: form.quantity,
           isNegotiable: form.isNegotiable,
-          images: uploadedUrls,
+          images: finalUrls,
         }),
       })
 

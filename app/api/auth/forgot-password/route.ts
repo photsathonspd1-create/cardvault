@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { sendPasswordResetEmail } from "@/lib/email"
 import crypto from "crypto"
 
 /**
@@ -58,18 +59,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // TODO: Send email with reset link
-    // const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`
-    // await sendEmail(user.email, "รีเซ็ตรหัสผ่าน CardVault", `คลิกเพื่อรีเซ็ต: ${resetUrl}`)
-
-    console.log(`Password reset token for ${user.email}: ${token}`)
+    // Send reset email
+    const emailResult = await sendPasswordResetEmail(user.email, token)
+    if (!emailResult.success) {
+      console.warn("Failed to send reset email:", emailResult.error)
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         message: "หากอีเมลนี้มีในระบบ เราจะส่งลิงก์รีเซ็ตให้",
-        // DEV ONLY — remove in production
-        ...(process.env.NODE_ENV === "development" && { devToken: token }),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     )

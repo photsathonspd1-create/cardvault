@@ -34,7 +34,7 @@ interface CheckoutListing {
 
 export default function CheckoutPage({ params }: CheckoutPageProps) {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [listing, setListing] = useState<CheckoutListing | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -104,6 +104,19 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="container px-4 py-20 text-center">
+        <AlertCircle className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">กรุณาเข้าสู่ระบบ</h2>
+        <p className="text-zinc-400 mb-4">คุณต้องเข้าสู่ระบบก่อนทำการสั่งซื้อ</p>
+        <Button variant="gold" onClick={() => router.push("/login")}>
+          เข้าสู่ระบบ
+        </Button>
+      </div>
+    )
   }
 
   if (loading) {

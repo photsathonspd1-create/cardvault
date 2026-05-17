@@ -59,7 +59,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     prisma.listing.findMany({
       where,
       include: {
-        images: { take: 1, orderBy: { order: "asc" } },
+        images: { take: 1 },
         seller: { include: { user: { select: { name: true, username: true } } } },
       },
       take: pageSize,

@@ -125,22 +125,33 @@ export async function extractTextFromImage(imageBuffer: Buffer): Promise<{
   confidence: number
   words: Array<{ text: string; confidence: number }>
 }> {
-  // Dynamic import for server-only module
-  const Tesseract = await import("tesseract.js")
+  try {
+    // Dynamic import for server-only module
+    // Tesseract.js v5 uses worker threads that may not work in serverless environments
+    const Tesseract = await import("tesseract.js")
 
-  const result = await Tesseract.recognize(imageBuffer, "eng+jpn", {
-    logger: () => {}, // Suppress logging
-  })
+    const result = await Tesseract.recognize(imageBuffer, "eng+jpn", {
+      logger: () => {}, // Suppress logging
+    })
 
-  const words = result.data.words.map((w) => ({
-    text: w.text,
-    confidence: w.confidence,
-  }))
+    const words = result.data.words.map((w) => ({
+      text: w.text,
+      confidence: w.confidence,
+    }))
 
-  return {
-    text: result.data.text,
-    confidence: result.data.confidence,
-    words,
+    return {
+      text: result.data.text,
+      confidence: result.data.confidence,
+      words,
+    }
+  } catch (error) {
+    console.error("[card-identify] Tesseract OCR failed (expected in serverless):", error)
+    // Graceful fallback — return empty text so caller can try alternative search
+    return {
+      text: "",
+      confidence: 0,
+      words: [],
+    }
   }
 }
 

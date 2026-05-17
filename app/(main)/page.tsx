@@ -19,7 +19,7 @@ export default async function HomePage() {
   const recentListings = await prisma.listing.findMany({
     where: { status: "ACTIVE" },
     include: {
-      images: { take: 1, orderBy: { order: "asc" } },
+      images: { take: 1 },
       seller: { include: { user: { select: { name: true, username: true } } } },
     },
     take: 8,

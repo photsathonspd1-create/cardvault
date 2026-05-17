@@ -229,3 +229,40 @@ export function disputeOpenedTemplate(data: {
     `
   )
 }
+
+export async function sendPasswordResetEmail(
+  email: string,
+  resetToken: string
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://cardvault-drab.vercel.app"
+  const resetUrl = `${appUrl}/reset-password?token=${resetToken}`
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: "รีเซ็ตรหัสผ่าน CardVault",
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #F59E0B; margin: 0;">CardVault</h1>
+          </div>
+          <div style="background: #18181b; border-radius: 12px; padding: 24px; color: #fafafa;">
+            <h2 style="margin-top: 0;">รีเซ็ตรหัสผ่าน</h2>
+            <p style="color: #a1a1aa;">คุณได้ขอรีเซ็ตรหัสผ่าน กดปุ่มด้านล่างเพื่อตั้งรหัสผ่านใหม่:</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${resetUrl}" style="display: inline-block; background: #F59E0B; color: #000; font-weight: bold; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+                รีเซ็ตรหัสผ่าน
+              </a>
+            </div>
+            <p style="color: #71717a; font-size: 12px;">ลิงก์นี้จะหมดอายุใน 1 ชั่วโมง</p>
+            <p style="color: #71717a; font-size: 12px;">หากคุณไม่ได้ขอรีเซ็ต กรุณาละเลยอีเมลนี้</p>
+          </div>
+        </div>
+      `,
+    })
+    return { success: true }
+  } catch (error) {
+    console.error("Password reset email error:", error)
+    return { success: false, error: String(error) }
+  }
+}

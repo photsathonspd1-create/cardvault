@@ -8,10 +8,10 @@
 
 import { supabaseAdmin } from "./supabase-client"
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruugptsudyxyozywevcu.supabase.co"
-const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dWdwdHN1ZHl4eW96eXdldmN1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODkzODEzMSwiZXhwIjoyMDk0NTE0MTMxfQ.sPpG_MTIrrOArwF0_QlS9opOL9KRhuO6QhL23V_h2b4"
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+if (!SUPABASE_URL) throw new Error("NEXT_PUBLIC_SUPABASE_URL is required")
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!SUPABASE_SERVICE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required")
 
 // ─── Raw PostgREST fetch (bypasses Supabase JS client limitations) ──
 async function postgrestFetch<T = unknown[]>(
@@ -449,7 +449,7 @@ function buildSelectStringSimple(
       const nestedSelect = relSpec.select as Record<string, unknown> | undefined
 
       if (nestedInclude || nestedSelect) {
-        const innerParts: string[] = []
+        const innerParts: string[] = ["*"] // Always include parent table columns
         if (nestedSelect) {
           for (const [k, v] of Object.entries(nestedSelect)) {
             if (v === true) innerParts.push(k)
@@ -457,6 +457,7 @@ function buildSelectStringSimple(
         }
         if (nestedInclude) {
           for (const [k, v] of Object.entries(nestedInclude)) {
+            if (k === "_count") continue // Skip _count — handled separately in fetchIncludes
             const innerTableName = resolveRelation(tableName, k)
             if (v === true) innerParts.push(`${innerTableName}(*)`)
             else if (typeof v === "object") {
@@ -510,6 +511,41 @@ function applyNestedTake(
       if (Array.isArray(val)) {
         const key = relation in row ? relation : tableName
         row[key] = val.slice(0, take)
+      }
+    }
+  }
+  return rows
+}
+
+/** Remap PascalCase PostgREST table keys back to camelCase Prisma relation names. */
+function remapTableKeys(
+  rows: Record<string, unknown>[],
+  include: Record<string, unknown>,
+  parentTable: string = ""
+): Record<string, unknown>[] {
+  if (!include) return rows
+  for (const row of rows) {
+    for (const [relation, spec] of Object.entries(include)) {
+      if (relation === "_count") continue
+      const tableName = parentTable ? resolveRelation(parentTable, relation) : (RELATION_MAP[relation] ?? relation)
+      if (tableName === relation) continue // No remap needed
+      if (tableName in row && !(relation in row)) {
+        row[relation] = row[tableName]
+        delete row[tableName]
+        // Recursively remap nested relations
+        if (spec && typeof spec === "object" && spec !== true && spec !== false) {
+          const nestedInclude = (spec as Record<string, unknown>).include as Record<string, unknown> | undefined
+          const nestedSelect = (spec as Record<string, unknown>).select as Record<string, unknown> | undefined
+          const nestedSpec = nestedInclude || nestedSelect
+          if (nestedSpec) {
+            const val = row[relation]
+            if (Array.isArray(val)) {
+              remapTableKeys(val, nestedSpec, tableName)
+            } else if (val && typeof val === "object") {
+              remapTableKeys([val as Record<string, unknown>], nestedSpec, tableName)
+            }
+          }
+        }
       }
     }
   }
@@ -775,7 +811,7 @@ function buildSelectString(
       const orderBy = relSpec.orderBy as Record<string, string> | undefined
 
       if (nestedInclude || nestedSelect) {
-        const innerParts: string[] = []
+        const innerParts: string[] = ["*"] // Always include parent table columns
         if (nestedSelect) {
           for (const [k, v] of Object.entries(nestedSelect)) {
             if (v === true) innerParts.push(k)
@@ -783,6 +819,7 @@ function buildSelectString(
         }
         if (nestedInclude) {
           for (const [k, v] of Object.entries(nestedInclude)) {
+            if (k === "_count") continue // Skip _count — handled separately
             const innerTableName = resolveRelation(tableName, k)
             if (v === true) {
               innerParts.push(`${innerTableName}(*)`)
@@ -875,7 +912,7 @@ function buildPostgrestFilters(where: Record<string, unknown>): Record<string, s
           }
           orParts.push(parts.join(","))
         }
-        params.or = `(${orParts.join("),(")})`
+        params.or = `(${orParts.join(",")})`
       }
       continue
     }
@@ -1118,6 +1155,7 @@ function createModelProxy(modelName: string) {
       let result = data ?? []
       if (include && result.length > 0) {
         result = applyNestedTake(result, include, table)
+        result = remapTableKeys(result, include, table)
         // Process _count if present (not handled by PostgREST select)
         if (include._count && typeof include._count === "object") {
           const countSpec = include._count as Record<string, unknown>
@@ -1197,6 +1235,7 @@ function createModelProxy(modelName: string) {
       let result = data[0]
       if (include) {
         result = applyNestedTake([result], include, table)[0]
+        result = remapTableKeys([result], include, table)[0]
         // Process _count if present (not handled by PostgREST select)
         if (include._count && typeof include._count === "object") {
           const countSpec = include._count as Record<string, unknown>
@@ -1884,7 +1923,7 @@ function applyWhereClause(
 
 // ─── $queryRaw and $transaction ───────────────────────────────────
 
-const MANAGEMENT_API_URL = "https://api.supabase.com/v1/projects/ruugptsudyxyozywevcu/database/query"
+const MANAGEMENT_API_URL = process.env.SUPABASE_MANAGEMENT_API_URL || "https://api.supabase.com/v1/projects/ruugptsudyxyozywevcu/database/query"
 const MANAGEMENT_API_KEY = process.env.SUPABASE_MANAGEMENT_KEY || ""
 
 async function queryRaw(sql: string, ...params: unknown[]): Promise<unknown[]> {

@@ -5,24 +5,23 @@ import { autoReleaseEscrow } from "@/services/escrow.service"
  * Cron endpoint for auto-releasing escrow funds
  * 
  * Called by Vercel Cron daily at 3:00 AM ICT (UTC+7)
- * Verifies CRON_SECRET to prevent unauthorized access
+ * Verifies via CRON_SECRET or Vercel's x-vercel-cron-secret header
  * 
  * @see vercel.json for cron configuration
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get("authorization")
   const cronSecret = process.env.CRON_SECRET
+  const authHeader = request.headers.get("authorization")
+  const vercelCronSecret = request.headers.get("x-vercel-cron-secret")
 
-  if (!cronSecret) {
-    console.error("CRON_SECRET not configured")
-    return new Response(
-      JSON.stringify({ error: "Server misconfiguration" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    )
-  }
+  // Accept either CRON_SECRET bearer token or Vercel's cron secret header
+  const isAuthorized =
+    (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+    (cronSecret && vercelCronSecret === cronSecret) ||
+    // If no CRON_SECRET is set, allow in development
+    process.env.NODE_ENV === "development"
 
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorized) {
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
       { status: 401, headers: { "Content-Type": "application/json" } }

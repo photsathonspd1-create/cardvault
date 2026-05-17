@@ -30,17 +30,22 @@ export async function POST(request: NextRequest) {
 
     const { name, username, email, password } = parsed.data
 
-    // Check if email or username already exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { username }],
-      },
-    })
+    // Check if email or username already exists (use separate queries to avoid OR issues)
+    const [existingByEmail, existingByUsername] = await Promise.all([
+      prisma.user.findUnique({ where: { email } }),
+      prisma.user.findUnique({ where: { username } }),
+    ])
 
-    if (existingUser) {
-      const field = existingUser.email === email ? "อีเมล" : "ชื่อผู้ใช้"
+    if (existingByEmail) {
       return new Response(
-        JSON.stringify({ error: `${field}นี้มีผู้ใช้แล้ว` }),
+        JSON.stringify({ error: "อีเมลนี้มีผู้ใช้แล้ว" }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    if (existingByUsername) {
+      return new Response(
+        JSON.stringify({ error: "ชื่อผู้ใช้นี้มีผู้ใช้แล้ว" }),
         { status: 409, headers: { "Content-Type": "application/json" } }
       )
     }

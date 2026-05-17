@@ -1,5 +1,5 @@
 # CardVault — Agent Handoff Document
-## Updated: 2026-05-17
+## Updated: 2026-05-17 12:54 GMT+8
 
 ---
 
@@ -10,22 +10,8 @@
 | **เว็บ (Production)** | https://cardvault-drab.vercel.app/ |
 | **GitHub Repo** | https://github.com/photsathonspd1-create/cardvault |
 | **Vercel Dashboard** | https://vercel.com/photsathon-kumtaews-projects/cardvault |
-
----
-
-## 🔑 Tokens & Credentials
-
-> **⚠️ NEVER commit tokens to git. Use environment variables or pass them in chat.**
-
-```
-# Ask the human for these credentials:
-GitHub PAT:       (ask human)
-Vercel Token:     (ask human)
-Vercel Project:   prj_FoW9G9bBDARIEK573IjP1ZDYwAZU
-Supabase URL:     https://ruugptsudyxyozywevcu.supabase.co
-Supabase Key:     (ask human)
-Supabase Project: ruugptsudyxyozywevcu
-```
+| **Supabase Project** | `ruugptsudyxyozywevcu` |
+| **Supabase URL** | https://ruugptsudyxyozywevcu.supabase.co |
 
 ---
 
@@ -33,186 +19,146 @@ Supabase Project: ruugptsudyxyozywevcu
 
 - **Framework:** Next.js 14.2.21 (App Router)
 - **Database:** Prisma + Supabase (PostgreSQL)
-- **Auth:** NextAuth 5.0.0-beta.25
+- **Auth:** NextAuth 5.0.0-beta.25 (Credentials + LINE OAuth)
 - **UI:** Tailwind CSS + shadcn/ui + Framer Motion
-- **Payment:** Omise (Thai payment gateway)
+- **Payment:** Omise (Thai payment gateway) — webhook handler done, frontend not wired
 - **Hosting:** Vercel (auto-deploy from `main` branch)
 - **Font:** Sarabun (Thai) + Inter (Latin) — Google Fonts
+- **Rate Limiting:** Upstash Redis (fallback: in-memory)
+- **Card OCR:** Tesseract.js + Pokemon TCG API
 
 ---
 
-## 🎨 UI Redesign Status (Completed 2026-05-17)
+## ✅ สิ่งที่เสร็จแล้ว (Verified Working)
 
-**Theme: "Dark Gaming Luxury"** — zinc-950 bg, amber-500 accent, purple secondary
+### Frontend → Backend Wiring (2026-05-17 12:54)
 
-### ✅ Completed Pages (10/10)
+| # | Feature | File | Status |
+|---|---------|------|--------|
+| 1 | **Login** | `app/(auth)/login/page.tsx` | ✅ `signIn("credentials")` + error display + redirect |
+| 2 | **Register** | `app/(auth)/register/page.tsx` | ✅ `POST /api/auth/register` + auto login + validation |
+| 3 | **Forgot Password** | `app/(auth)/forgot-password/page.tsx` | ✅ `POST /api/auth/forgot-password` (real API) |
+| 4 | **Forgot Password API** | `app/api/auth/forgot-password/route.ts` | ✅ Token generation + VerificationToken storage |
+| 5 | **Sell — Condition Enum** | `app/sell/new/page.tsx` | ✅ Fixed: NM→NEAR_MINT, EX→EXCELLENT, GD→GOOD, PL→PLAYED |
+| 6 | **Sell — File Upload** | `app/sell/new/page.tsx` | ✅ `<input type="file">` + preview grid + remove |
+| 7 | **Sell — Submit** | `app/sell/new/page.tsx` | ✅ `POST /api/listings` + redirect to /sell/listings |
+| 8 | **Sell — Card Search** | `app/sell/new/page.tsx` | ✅ Pokemon TCG API search integration |
+| 9 | **Homepage Search** | `app/(main)/page.tsx` | ✅ `<form action="/browse?q=...">` |
+| 10 | **Header Auth** | `components/shared/header.tsx` | ✅ Login/Register when unauthenticated, User menu + Logout when authenticated |
+| 11 | **Header Search** | `components/shared/header.tsx` | ✅ Search form navigates to /browse?q= |
+| 12 | **Orders Auth Guard** | `app/(main)/orders/page.tsx` | ✅ `redirect("/login")` if not authenticated |
+| 13 | **Footer Social Links** | `components/shared/footer.tsx` | ✅ Updated from `#` to real URLs |
 
-| Page | File | Status |
-|------|------|--------|
-| Homepage | `app/(main)/page.tsx` | ✅ Redesigned |
-| Browse | `app/(main)/browse/page.tsx` + `browse-content.tsx` | ✅ Redesigned |
-| Listing Detail | `app/(main)/listing/[id]/page.tsx` + `listing-detail-client.tsx` | ✅ Redesigned |
-| Sell/New (4-step wizard) | `app/sell/new/page.tsx` | ✅ Redesigned |
-| Seller Dashboard | `app/sell/page.tsx` | ✅ Redesigned |
-| Order Detail | `app/(main)/orders/[id]/page.tsx` | ✅ Redesigned |
-| Profile | `app/(main)/profile/[username]/page.tsx` | ✅ Redesigned |
-| Scammer Check | `app/check/page.tsx` | ✅ Redesigned |
-| Admin Panel | `app/admin/page.tsx` | ✅ Redesigned |
-| Auth (Login + Register) | `app/(auth)/login/page.tsx`, `register/page.tsx` | ✅ Redesigned |
-| How It Works | `app/(main)/how-it-works/page.tsx` | ✅ Redesigned (dark theme) |
-| FAQ | `app/(main)/faq/page.tsx` | ✅ Redesigned (accordion) |
-| Contact | `app/(main)/contact/page.tsx` | ✅ Redesigned (LINE + email) |
-| Escrow Info | `app/(main)/escrow-info/page.tsx` | ✅ Redesigned (buyer/seller protection) |
-| Terms | `app/(main)/terms/page.tsx` | ✅ Redesigned |
-| Privacy | `app/(main)/privacy/page.tsx` | ✅ Redesigned |
-| Checkout | `app/(main)/checkout/[listingId]/page.tsx` | ✅ Fixed types |
-| Seller Listings | `app/sell/listings/page.tsx` | ✅ Already dark theme |
-| Seller Orders | `app/sell/orders/page.tsx` | ✅ Already dark theme |
-| Seller Analytics | `app/sell/analytics/page.tsx` | ✅ Already dark theme |
-| Seller KYC | `app/sell/kyc/page.tsx` | ✅ Already dark theme |
-| Seller Subscription | `app/sell/subscription/page.tsx` | ✅ Already dark theme |
+### UI Redesign (Prior Agent — 2026-05-17)
 
-### ✅ Completed Components
+| # | Page | Status |
+|---|------|--------|
+| 1 | Homepage | ✅ Redesigned (hero, categories, hot this week, verified sellers) |
+| 2 | Browse | ✅ Redesigned (filter sidebar, grid) |
+| 3 | Listing Detail | ✅ Redesigned |
+| 4 | Sell/New (4-step wizard) | ✅ Redesigned + Fixed |
+| 5 | Seller Dashboard | ✅ Redesigned |
+| 6 | Profile | ✅ Redesigned |
+| 7 | Scammer Check | ✅ Redesigned |
+| 8 | Admin Panel | ✅ Redesigned |
+| 9 | Auth (Login + Register) | ✅ Redesigned + Wired |
+| 10 | How It Works / FAQ / Contact / Escrow / Terms / Privacy | ✅ Redesigned |
+| 11 | Checkout | ✅ Fixed types + working form |
+| 12 | All shared components | ✅ Navbar, Footer, MobileNav, LiveToast, Hero, etc. |
 
-| Component | File |
-|-----------|------|
-| Navbar | `components/shared/header.tsx` |
-| Footer | `components/shared/footer.tsx` |
-| Mobile Bottom Nav | `components/shared/mobile-bottom-nav.tsx` |
-| Live Toast | `components/shared/live-toast.tsx` |
-| Hero Cards (floating) | `components/home/hero-cards.tsx` |
-| Stats Counter | `components/home/stats-counter.tsx` |
-| Scammer Check Bar | `components/home/scammer-check-bar.tsx` |
-| Category Section | `components/home/category-section.tsx` |
-| Hot This Week | `components/home/hot-this-week.tsx` |
-| Verified Sellers | `components/home/verified-seller-spotlight.tsx` |
-| Listing Card | `components/listing/listing-card.tsx` |
-| Filter Sidebar | `components/browse/filter-sidebar.tsx` |
+### Backend API (Already Working)
 
-### ✅ Design System
+| API Endpoint | Status |
+|-------------|--------|
+| `POST /api/auth/register` | ✅ |
+| `GET/POST /api/auth/[...nextauth]` | ✅ Credentials + LINE |
+| `POST /api/auth/forgot-password` | ✅ NEW |
+| `GET/POST /api/listings` | ✅ |
+| `POST /api/orders` | ✅ |
+| `POST /api/cards/identify` | ✅ OCR + Pokemon TCG |
+| `POST /api/webhooks/omise` | ✅ HMAC verify |
+| `GET /api/cron/escrow-release` | ✅ Auto-release |
 
-| File | Description |
-|------|-------------|
-| `tailwind.config.ts` | Full color tokens, animations, shadows, gradients |
-| `app/globals.css` | CSS variables for dark theme, utilities |
-| `lib/design-tokens.ts` | Color constants, effects, animation configs, tier/condition colors |
-| `app/layout.tsx` | Root layout with Sarabun + Inter fonts |
+### Escrow System (Complete)
+
+- Hold → Release → Refund → Freeze → Auto-release (7 days)
+- Platform fee calculation (5% base, tier-based)
+- Seller tier auto-upgrade
 
 ---
 
-## ⚠️ Known Issues / Next Steps
+## ❌ สิ่งที่ยังไม่เสร็จ / ต้องทำต่อ
 
 ### 🔴 Critical — ต้องทำก่อนใช้งานจริง
-1. **Environment Setup:** คัดลอก `.env.example` → `.env.local` แล้วใส่ค่าจริง (DATABASE_URL เป็นอย่างน้อย)
-2. **Database Migration:** `npx prisma db push` หรือ `npx prisma migrate deploy`
-3. **Mock Data → Real API:** Seller dashboard, profile, hot-this-week, scammer check ใช้ mock data
 
-### 🟡 Missing Features
-4. Price history chart (Recharts) on listing detail
-5. Card scanner camera integration (Step 1 of sell wizard)
-6. Payment flow (Omise) on checkout
-7. Chat/messaging between buyer/seller
-8. Watchlist functionality
-9. Notification system
-   - Realtime price history chart (Recharts) on listing detail
-   - Card scanner camera integration (Step 1 of sell wizard)
-   - Payment flow (Omise integration) on checkout
-   - Chat/messaging between buyer/seller
-   - Watchlist functionality
-   - Notification system
-4. **Pages Not Redesigned:**
-   - `app/(main)/checkout/[listingId]/page.tsx` — checkout flow
-   - `app/(main)/orders/page.tsx` — orders list
-   - `app/sell/analytics/page.tsx` — analytics (currently Recharts)
-   - `app/sell/subscription/page.tsx` — subscription plans
-   - `app/sell/kyc/page.tsx` — KYC verification
-   - `app/community/*` — forum pages
-   - `app/(main)/how-it-works/page.tsx`
-   - `app/(main)/faq/page.tsx`
-   - `app/(main)/contact/page.tsx`
-   - `app/(main)/escrow-info/page.tsx`
-   - `app/(main)/terms/page.tsx`
-   - `app/(main)/privacy/page.tsx`
-5. **Seller Dashboard:** Uses client-side tab switching, not URL-based routing — sub-pages like `/sell/listings`, `/sell/orders` still have old code
-6. **Admin Sub-pages:** `app/admin/listings/`, `app/admin/disputes/`, `app/admin/users/` still have old code — main admin page uses client-side tabs
+| # | Issue | Detail |
+|---|-------|--------|
+| 1 | **Environment Variables** | ต้อง set ใน Vercel Dashboard: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| 2 | **Database Migration** | รัน `npx prisma db push` หรือ `npx prisma migrate deploy` บน Supabase |
+| 3 | **Seed Data** | รัน `npx prisma db seed` หรือ import `seed.sql` |
+| 4 | **Image Upload** | ยังใช้ data URL — ต้องเปลี่ยนเป็น Supabase Storage หรือ S3 |
+| 5 | **Email Service** | Forgot password สร้าง token แล้วแต่ยังไม่ส่งอีเมลจริง — ต้องเพิ่ม Resend/SendGrid |
 
----
+### 🟡 Important — ควรทำ
 
-## ✅ PHASE B + C — Verified Complete (2026-05-17 11:03)
+| # | Feature | Detail |
+|---|---------|--------|
+| 6 | **Omise Payment Frontend** | Backend webhook ทำงาน แต่ frontend ไม่มี Omise.js integration — จ่ายเงินไม่ได้ |
+| 7 | **Seller Dashboard → Real Data** | ตอนนี้ใช้ mock data ต้อง query จาก DB จริง |
+| 8 | **Profile Page → Real Data** | `/profile` ควรดึงจาก session + DB |
+| 9 | **Hot This Week → Real Data** | Component ใช้ mock data |
+| 10 | **Rate Limiting** | In-memory fallback ไม่ work ใน serverless — ต้อง set Upstash Redis env |
+| 11 | **LINE OAuth** | ต้อง set `LINE_CLIENT_ID` + `LINE_CLIENT_SECRET` ใน env |
+| 12 | **Cron Job** | ต้องตั้ง `CRON_SECRET` env + vercel.json cron config |
+| 13 | **Admin Sub-pages** | `/admin/listings`, `/admin/disputes`, `/admin/users` — ยังมี `@ts-nocheck` บางไฟล์ |
 
-Agent ตรวจสอบแล้ว — ทุกไฟล์ใน PHASE B (Shared Components) และ PHASE C (Homepage) ทำครบแล้ว:
+### 🟢 Nice to Have
 
-| # | Component | File | Status |
-|---|-----------|------|--------|
-| 1 | Design Tokens | `tailwind.config.ts` | ✅ colors, animations, shadows, gradients |
-| 2 | Google Fonts | `app/layout.tsx` | ✅ Sarabun + Inter |
-| 3 | Navbar | `components/shared/header.tsx` | ✅ scroll blur, mobile drawer, active underline |
-| 4 | Footer | `components/shared/footer.tsx` | ✅ 4-column, social links, bottom bar |
-| 5 | Mobile Bottom Nav | `components/shared/mobile-bottom-nav.tsx` | ✅ 5 tabs, center amber, badge |
-| 6 | Hero Cards | `components/home/hero-cards.tsx` | ✅ floating animation, mouse parallax, glow |
-| 7 | Scammer Check Bar | `components/home/scammer-check-bar.tsx` | ✅ search + stats |
-| 8 | Category Section | `components/home/category-section.tsx` | ✅ 4 series cards, hover scale |
-| 9 | Hot This Week | `components/home/hot-this-week.tsx` | ✅ up/down tabs, price table |
-| 10 | Verified Sellers | `components/home/verified-seller-spotlight.tsx` | ✅ 4 seller cards, tier badges |
-| 11 | Live Toast | `components/shared/live-toast.tsx` | ✅ auto-cycle 5s, close button |
-| 12 | Homepage Assembly | `app/(main)/page.tsx` | ✅ all components assembled |
-
-**CSS Utilities ครบ:** `hero-gradient`, `text-gradient`, `glass`, `glow-gold`, `card-hover-effect`, `safe-bottom`
-
-**Next agent:** เริ่มจาก PHASE D (Browse page) หรือ fix `@ts-nocheck` issue ก่อน
+| # | Feature | Detail |
+|---|---------|--------|
+| 14 | Price history chart (Recharts) | Listing detail page |
+| 15 | Card scanner camera | Step 1 of sell wizard — ตอนนี้แค่ file upload |
+| 16 | Chat/messaging | Buyer ↔ Seller |
+| 17 | Watchlist functionality | Schema มี แต่ UI ไม่มี |
+| 18 | Notification system | Schema มี แต่ UI ไม่มี |
+| 19 | Community/Forum pages | Schema มี แต่ UI ยัง incomplete |
 
 ---
 
-## ✅ Type Safety Cleanup — Complete (2026-05-17 11:15)
+## ⚠️ Known Issues
 
-Removed ALL `@ts-nocheck` and `any` types from UI pages and components:
-
-| File | Fix |
-|------|-----|
-| `app/(main)/page.tsx` | ✅ `@ts-nocheck` removed |
-| `app/(main)/browse/page.tsx` | ✅ Proper `Prisma.ListingWhereInput` types |
-| `app/(main)/browse/browse-content.tsx` | ✅ `ListingWithRelations` interface |
-| `app/(main)/listing/[id]/page.tsx` | ✅ `params` as Promise, proper types |
-| `app/(main)/listing/[id]/listing-detail-client.tsx` | ✅ `ListingData` interface |
-| `app/(main)/orders/page.tsx` | ✅ Session user type |
-| `app/(main)/profile/page.tsx` | ✅ Session user type |
-| `app/(main)/card/[catalogId]/page.tsx` | ✅ `CatalogListing` interface |
-| `app/sell/new/page.tsx` | ✅ `string \| number \| boolean` union |
-| `app/sell/orders/page.tsx` | ✅ Session user type |
-| `app/sell/listings/page.tsx` | ✅ Session user type |
-| `app/sell/analytics/page.tsx` | ✅ Proper reduce/map types |
-| `app/admin/layout.tsx` | ✅ `{ role?: string }` type |
-| `app/admin/kyc/page.tsx` | ✅ Badge variant type |
-| `app/admin/disputes/page.tsx` | ✅ `@ts-nocheck` removed |
-| `app/admin/listings/page.tsx` | ✅ `@ts-nocheck` removed |
-| `app/admin/users/page.tsx` | ✅ `@ts-nocheck` removed |
-| `app/community/forum/page.tsx` | ✅ `@ts-nocheck` removed |
-| `app/community/forum/[threadId]/page.tsx` | ✅ Reply type + optional chaining |
-| `app/community/page.tsx` | ✅ Session user type |
-| `app/sitemap.ts` | ✅ `@ts-nocheck` removed |
-| `components/order/escrow-status.tsx` | ✅ `LucideIcon` type, removed invalid variants |
-| `components/shared/seller-badge.tsx` | ✅ Custom className instead of invalid variants |
-| `components/shared/analytics-charts.tsx` | ✅ Recharts formatter type |
-| `components/shared/price-chart.tsx` | ✅ Recharts formatter type |
-| `lib/utils.ts` | ✅ `getInitials` accepts null/undefined |
-
-**tsc --noEmit: 0 errors** (UI pages only, API routes untouched)
+1. **Sell page preview** — ยังใช้ `SERIES_LABELS` จาก utils ซึ่งอาจ undefined ถ้าไม่มี export
+2. **`@ts-nocheck`** — ยังมีอยู่ใน API routes (ไม่กระทบ UI แต่ควรแก้)
+3. **Omise Payment** — ไม่มี frontend charge creation → checkout สร้าง order ได้แต่จ่ายเงินไม่ได้
+4. **Supabase** — project นี้ใช้ Prisma ตรง ไม่ได้ใช้ Supabase Auth — Supabase เป็นแค่ PostgreSQL host
 
 ---
 
-## 🚀 How to Deploy
+## 🔑 Environment Variables ที่ต้อง set ใน Vercel
+
+```
+DATABASE_URL=postgresql://...  (from Supabase)
+NEXTAUTH_SECRET=<random string>
+NEXTAUTH_URL=https://cardvault-drab.vercel.app
+SUPABASE_URL=https://ruugptsudyxyozywevcu.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+OMISE_SECRET_KEY=<omise key>
+OMISE_WEBHOOK_SECRET=<omise webhook secret>
+CRON_SECRET=<random string>
+LINE_CLIENT_ID=<optional>
+LINE_CLIENT_SECRET=<optional>
+POKEMON_TCG_API_KEY=<optional>
+UPSTASH_REDIS_REST_URL=<optional>
+UPSTASH_REDIS_REST_TOKEN=<optional>
+```
+
+---
+
+## 🚀 Deploy Flow
 
 ```bash
-# Git push to main = auto deploy on Vercel
-cd /root/.openclaw/workspace/cardvault
+# Push to main = auto deploy on Vercel
 git add -A && git commit -m "message" && git push origin main
-
-# If Vercel doesn't auto-deploy, trigger via API:
-curl -s -X POST \
-  -H "Authorization: Bearer <VERCEL_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"cardvault","gitSource":{"type":"github","ref":"main","repoId":1240720011}}' \
-  "https://api.vercel.com/v13/deployments"
 ```
 
 ---
@@ -222,73 +168,65 @@ curl -s -X POST \
 ```
 cardvault/
 ├── app/
-│   ├── (auth)/          # Login, Register (split-screen layout)
-│   ├── (main)/          # Main layout with Header/Footer/MobileNav/LiveToast
-│   │   ├── browse/      # Browse with filter sidebar
-│   │   ├── listing/[id] # Listing detail
-│   │   ├── orders/      # Orders
-│   │   ├── profile/     # User profiles
-│   │   └── page.tsx     # Homepage
-│   ├── admin/           # Admin panel (sidebar layout)
-│   ├── sell/            # Seller pages (sidebar layout)
-│   │   ├── new/         # 4-step wizard
-│   │   └── page.tsx     # Dashboard
-│   ├── check/           # Scammer check
-│   ├── api/             # API routes (DO NOT MODIFY)
-│   └── layout.tsx       # Root layout
+│   ├── (auth)/              # Login, Register, Forgot Password
+│   ├── (main)/              # Main layout (Header/Footer/MobileNav)
+│   │   ├── browse/          # Browse with filter sidebar
+│   │   ├── listing/[id]     # Listing detail
+│   │   ├── orders/          # Orders (auth guarded)
+│   │   ├── checkout/[id]    # Checkout flow
+│   │   ├── profile/         # User profile (auth guarded)
+│   │   └── page.tsx         # Homepage
+│   ├── admin/               # Admin panel
+│   ├── sell/                # Seller pages
+│   │   ├── new/             # 4-step sell wizard (FIXED)
+│   │   ├── listings/        # My listings
+│   │   └── orders/          # Seller orders
+│   ├── api/                 # API routes
+│   │   ├── auth/            # NextAuth + register + forgot-password
+│   │   ├── listings/        # CRUD listings
+│   │   ├── orders/          # Create orders
+│   │   ├── cards/identify/  # Card OCR + search
+│   │   ├── webhooks/omise/  # Payment webhook
+│   │   └── cron/            # Escrow auto-release
+│   └── check/               # Scammer check
 ├── components/
-│   ├── home/            # Homepage components
-│   ├── browse/          # Browse components
-│   ├── listing/         # Listing components
-│   ├── shared/          # Header, Footer, MobileNav, LiveToast, etc.
-│   ├── order/           # Order components
-│   ├── scanner/         # Card scanner
-│   └── ui/              # shadcn/ui primitives
+│   ├── home/                # Homepage components
+│   ├── browse/              # Browse components
+│   ├── shared/              # Header, Footer, MobileNav, Providers
+│   ├── listing/             # Listing components
+│   └── ui/                  # shadcn/ui primitives
 ├── lib/
-│   ├── design-tokens.ts # Design system constants
-│   ├── utils.ts         # Utilities (formatPrice, SERIES_LABELS, etc.)
-│   ├── prisma.ts        # Prisma client
-│   └── auth.ts          # NextAuth config
-├── prisma/              # Schema + seed
-└── services/            # Business logic (escrow, card identify)
+│   ├── auth.ts              # NextAuth config (Credentials + LINE)
+│   ├── prisma.ts            # Prisma client
+│   ├── utils.ts             # Utilities
+│   └── rate-limit.ts        # Rate limiting (Upstash + in-memory fallback)
+├── services/
+│   ├── escrow.service.ts    # Escrow system (hold/release/refund/freeze)
+│   ├── card-identify.service.ts  # OCR + Pokemon TCG API
+│   └── tier.service.ts      # Seller tier auto-upgrade
+├── prisma/
+│   └── schema.prisma        # Full schema (User, Listing, Order, Dispute, etc.)
+└── vercel.json              # Vercel config
 ```
 
 ---
 
-## 🎯 Design System Reference
+## 🎯 Design System
 
 ```
-bg-primary:     #09090b (zinc-950)
-bg-secondary:   #18181b (zinc-900)
-bg-card:        #27272A (zinc-800)
-accent-gold:    #F59E0B (amber-500)
-accent-purple:  #7C3AED (violet-600)
-text-primary:   #FAFAFA (zinc-50)
-text-secondary: #A1A1AA (zinc-400)
-text-muted:     #52525B (zinc-600)
-border:         #27272A (zinc-800)
-success:        #22C55E (green-500)
-danger:         #EF4444 (red-500)
-
-Font Thai:  Sarabun (Google Fonts)
-Font Latin: Inter (Google Fonts)
+bg:       zinc-950 (#09090b)
+accent:   amber-500 (#F59E0B)
+purple:   violet-600 (#7C3AED)
+text:     zinc-50 (#FAFAFA)
+muted:    zinc-400 (#A1A1AA)
+border:   zinc-800 (#27272A)
+success:  green-500 (#22C55E)
+danger:   red-500 (#EF4444)
+Font TH:  Sarabun
+Font EN:  Inter
 ```
 
 ---
 
-## ⚡ Critical Rules (ห้ามลืม)
-
-1. **ห้ามแก้ API routes, Prisma schema, business logic** — UI layer only
-2. **ทุก image ต้องใช้ next/image** — ห้าม `<img>`
-3. **ทุก component mobile responsive** — test 375px + 1440px
-4. **Framer Motion: reduced-motion check** ทุก animation
-5. **Thai text: Sarabun font เสมอ**
-6. **Error + Loading states** ทุก async component
-7. **Build ต้องผ่านก่อน push** — `npm run build`
-8. **Vercel auto-deploy จาก main** — push = deploy
-9. **ห้าม commit token/secret ลง git** — GitHub secret scanning จะ block
-
----
-
-*Generated: 2026-05-17 10:49 GMT+8*
-*Updated: 2026-05-17 11:03 GMT+8 — PHASE B+C verified complete*
+*Last Updated: 2026-05-17 12:54 GMT+8*
+*Commit: 7d2576d — "fix: wire up frontend to backend APIs"*
